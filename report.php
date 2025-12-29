@@ -1,228 +1,186 @@
+<?php
+// PHP Logic to handle the search
+$publisher_search = "";
+$employee_search = "";
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $publisher_search = htmlspecialchars($_POST['publisher'] ?? "");
+    $employee_search = htmlspecialchars($_POST['employee'] ?? "");
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Report | Ink & Solace</title>
+
     <style>
-        /* Import Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Montserrat:wght@300;400;500;600;700&display=swap');
-
         :root {
-            --light-bg: #e6e6e6; 
-            --dark-bg: #1c202a; 
+            --light-bg: #dbdbdb; 
+            --dark-bg: #20252d;
             --input-bg: #f2f2f2;
-            --text-white: #ffffff;
-            --text-dark: #1a1a1a;
-            --btn-confirm: #8c827d; 
-            --btn-return: #3b4252;  
-            
-            --font-serif: 'Cinzel', serif;
-            --font-sans: 'Montserrat', sans-serif;
+            --btn-return: #3c4862;
         }
 
-        body, html {
-            margin: 0;
-            padding: 0;
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0; padding: 0;
             height: 100%;
-            font-family: var(--font-sans);
-            display: flex;
-            flex-direction: column;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
         }
 
-        /* --- TOP SECTION (Dark) --- */
+        body { display: flex; flex-direction: column; }
+
+        /* ================= TOP SECTION (Symmetrical Dark Area) ================= */
         .top-section {
             background-color: var(--dark-bg);
+            /* This height controls the overall size of the dark bar */
             height: 45%; 
             display: flex;
             flex-direction: column;
+            justify-content: center; /* Centers the content group vertically */
             align-items: center;
-            justify-content: center;
-            position: relative;
+        }
+
+        .header-content-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* The gap between the Logo and the Report Title */
+            gap: 40px; 
         }
 
         .logo-top {
-            position: absolute;
-            top: 40px;
-            width: 100px;
+            width: 180px;
             height: auto;
         }
 
-        .page-title {
-            font-family: var(--font-serif);
-            font-size: 64px;
-            color: var(--text-white);
-            text-align: center;
-            font-weight: 400;
-            line-height: 1.1;
-            letter-spacing: 2px;
-            margin-top: 20px;
-            text-transform: uppercase;
+        .page-title-img {
+            width: 500px;
+            max-width: 90%;
+            height: auto;
         }
 
-        /* --- BOTTOM SECTION (Light) --- */
+        /* ================= BOTTOM SECTION (Light Area) ================= */
         .bottom-section {
-            background-color: var(--light-bg);
-            height: 55%;
-            display: flex;
-            flex-direction: column;
-            padding: 20px 30px 15px 30px;
-        }
-
-        .form-container {
-            flex: 1; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-        }
-
-        form {
+            flex: 1;
+            padding: 50px 10% 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 100%;
-            max-width: 600px;
-        }
-
-        .input-group {
-            width: 100%;
-            margin-bottom: 25px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        label {
-            font-family: var(--font-serif);
-            font-size: 20px;
-            color: #444;
-            margin-bottom: 10px;
-            margin-left: 15px; 
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .input-wrapper {
             position: relative;
-            width: 100%;
         }
 
-        /* Search Icon SVG */
+        /* SEARCH BAR */
+        .search-container {
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+            margin-bottom: 40px;
+        }
+
         .search-icon {
             position: absolute;
             left: 20px;
             top: 50%;
             transform: translateY(-50%);
-            width: 18px;
-            height: 18px;
-            fill: none;
-            stroke: #666;
-            stroke-width: 2;
+            width: 20px;
+            height: 20px;
+            opacity: 0.5;
         }
 
-        input {
+        .search-input {
             width: 100%;
-            padding: 15px 20px 15px 50px;
+            padding: 15px 15px 15px 55px;
             border-radius: 50px;
-            border: none;
+            border: 1px solid #ccc;
             background-color: var(--input-bg);
-            font-size: 16px;
-            font-family: var(--font-serif);
-            color: #666;
             outline: none;
-            box-shadow: inset 1px 1px 4px rgba(0,0,0,0.05);
-            box-sizing: border-box;
-        }
-        
-        input::placeholder { color: #888; letter-spacing: 1px; text-transform: uppercase; }
-
-        /* Buttons */
-        .btn {
-            border: none;
-            border-radius: 50px;
-            padding: 12px 0;
-            width: 160px;
-            font-family: var(--font-sans);
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            color: white;
-            margin-top: 15px;
-            transition: transform 0.2s, opacity 0.2s;
-            text-align: center;
-        }
-
-        .btn:hover { opacity: 0.9; transform: scale(1.02); }
-        .btn-confirm { background-color: var(--btn-confirm); box-shadow: 0 4px 10px rgba(140, 130, 125, 0.4); margin-bottom: 10px; }
-        .btn-return { background-color: var(--btn-return); box-shadow: 0 4px 10px rgba(59, 66, 82, 0.4); }
-        a.btn-link { text-decoration: none; display: flex; justify-content: center; }
-
-        /* --- FOOTER --- */
-        .footer {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 10px;
-        }
-
-        .footer-img {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            background-color: #ccc; 
-        }
-
-        .footer-text {
-            font-family: var(--font-sans);
-            font-weight: 700;
-            font-size: 14px;
-            color: #333;
+            font-size: 18px;
+            letter-spacing: 2px;
             text-transform: uppercase;
         }
 
-        /* Responsive */
+        /* DATA PLACEHOLDER */
+        .results-placeholder {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .placeholder-data-img {
+            width: 380px;
+            max-width: 90%;
+            opacity: 0.9;
+        }
+
+        /* ================= RETURN BUTTON (Bottom Right) ================= */
+        .return-footer {
+            position: absolute;
+            bottom: 30px;
+            right: 5%;
+        }
+
+        .btn-return-wrap {
+            background-color: var(--btn-return);
+            padding: 12px 30px;
+            border-radius: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease;
+        }
+
+        .btn-return-img {
+            width: 160px;
+            height: auto;
+        }
+
         @media (max-width: 768px) {
-            .page-title { font-size: 42px; }
+            .page-title-img { width: 350px; }
+            .logo-top { width: 130px; }
             .top-section { height: 40%; }
-            .bottom-section { height: 60%; }
-            form { width: 90%; }
+            .return-footer { position: static; margin-top: 30px; }
         }
     </style>
 </head>
+
 <body>
 
     <div class="top-section">
-        <img src="https://via.placeholder.com/100x100/3b4252/e6e6e6?text=LOGO" alt="Logo" class="logo-top">
-        
-        <h1 class="page-title">REPORT</h1>
+        <div class="header-content-group">
+            <img src="assets/text/logo.png" class="logo-top" alt="Logo">
+            <img src="assets/text/title-report.png" class="page-title-img" alt="REPORT">
+        </div>
     </div>
 
     <div class="bottom-section">
         
-        <div class="form-container">
-            <form action="" method="POST">
-                
-                <div class="input-group">
-                    <label for="search_query">SEARCH</label>
-                    <div class="input-wrapper">
-                        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        <input type="text" id="search_query" name="search_query" placeholder="SEARCH">
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-confirm">Search</button>
-                
-                <a href="menu.php" class="btn-link">
-                    <button type="button" class="btn btn-return">Return to Main Menu</button>
-                </a>
-            </form>
+        <div class="search-container">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="search-input" placeholder="SEARCH">
         </div>
 
-        <footer class="footer">
-            <img src="https://via.placeholder.com/35x35/555555/ffffff?text=" alt="Group Logo" class="footer-img">
-            <div class="footer-text"></div>
-        </footer>
+        <div class="results-placeholder">
+            <img src="assets/text/placeholder-results.png" class="placeholder-data-img" alt="Data Results">
+        </div>
+
+        <div class="return-footer">
+            <a href="menu.php" style="text-decoration:none;">
+                <div class="btn-return-wrap">
+                    <img src="assets/text/btn-return.png" class="btn-return-img" alt="Return to Main Menu">
+                </div>
+            </a>
+        </div>
 
     </div>
 
