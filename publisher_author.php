@@ -1,11 +1,11 @@
 <?php
 // PHP Logic to handle the search
 $publisher_search = "";
-$employee_search = "";
+$title_search = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $publisher_search = htmlspecialchars($_POST['publisher'] ?? "");
-    $employee_search = htmlspecialchars($_POST['employee'] ?? "");
+    $title_search = htmlspecialchars($_POST['title'] ?? "");
 }
 ?>
 
@@ -14,7 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Publishers & Employees | Ink & Solace</title>
+    <title>Publishers & Authors | Ink & Solace</title>
 
     <style>
         :root {
@@ -212,7 +212,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <div class="top-section">
     <img src="assets/text/logo.png" class="logo-top" alt="Logo">
-    <img src="assets/text/title-publishers-authors.png" class="page-title-img" alt="Publishers & Employees">
+    <img src="assets/text/title-publishers-authors.png" class="page-title-img" alt="Publishers & Authors">
 </div>
 
 <div class="bottom-section">
@@ -229,10 +229,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
 
             <div class="input-group">
-                <img src="assets/text/label-employee.png" class="label-img" alt="Employee">
+                <img src="assets/text/label-title.png" class="label-img" alt="Title">
                 <div class="input-wrapper">
                     <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" name="employee" placeholder=" " value="<?php echo $employee_search; ?>">
+                    <input type="text" name="title" placeholder=" " value="<?php echo $title_search; ?>">
                     <img src="assets/text/placeholder-search.png" class="placeholder-img" alt="">
                 </div>
             </div>
