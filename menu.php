@@ -5,16 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Main Menu | Ink & Solace</title>
     <style>
-        /* Import Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Pinyon+Script&family=Montserrat:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400&family=Montserrat:wght@600&display=swap');
 
         :root {
-            --bg-color: #e6e6e6; 
-            --border-color: #666; 
+            --bg-color: #dbdbdb; 
+            --border-color: #999; 
             --text-color: #1a1a1a;
-            --font-serif: 'Cinzel', serif;
-            --font-script: 'Pinyon Script', cursive;
             --font-sans: 'Montserrat', sans-serif;
+            --accent-color: #000;
         }
 
         body, html {
@@ -29,206 +27,189 @@
         /* --- HEADER --- */
         .header {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 40px 60px; /* Increased padding */
+            justify-content: center; 
+            align-items: flex-start; 
+            padding: 0px 40px; 
+            position: relative;
+            min-height: 150px;
         }
 
-        /* LOGO PLACEHOLDER */
-        .logo-placeholder {
-            width: 100px;  /* Enlarged Logo Area */
-            height: 100px;
-            /* Replace the URL below with your actual logo file path */
-            background: url('https://via.placeholder.com/100x100/3b4252/e6e6e6?text=LOGO') center/contain no-repeat;
+        .logo-img {
+            width: 100px;  
+            height: auto;
+            margin-top: 45px;
+            position: absolute; 
+            left: 40px;
+            z-index: 10;
         }
 
-        .menu-icon {
-            font-size: 40px; /* Larger icon */
-            cursor: pointer;
-            color: #333;
-            margin-top: 15px;
-        }
-
-        /* --- TITLE SECTION --- */
         .title-container {
             text-align: center;
-            margin-top: -30px;
-            margin-bottom: 80px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            line-height: 0;
+            margin-top: 110px;
         }
 
-        .text-main {
-            font-family: var(--font-serif);
-            font-size: 140px; /* Significantly Larger */
-            font-weight: 400;
-            letter-spacing: -4px;
-            line-height: 1;
-        }
-
-        .text-menu {
-            font-family: var(--font-script);
-            font-size: 170px; /* Significantly Larger */
-            margin-left: -20px;
-            transform: translateY(20px);
-            line-height: 1;
+        .title-main-menu {
+            height: 160px; 
+            width: auto;
+            display: inline-block;
         }
 
         /* --- MENU GRID --- */
         .menu-grid {
-            max-width: 1700px; /* Much wider container */
-            margin: 0 auto;
-            padding: 0 60px 100px 60px;
+            max-width: 1200px;
+            margin: 60px auto 0; 
+            padding: 0 40px 80px 40px;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            column-gap: 50px; /* Wider gaps */
-            row-gap: 70px;
+            grid-template-columns: repeat(3, 1fr); /* Forces 3 columns */
+            gap: 25px;
         }
 
-        /* Grid Item Wrapper */
         .grid-item {
             display: flex;
             flex-direction: column;
-            position: relative;
+            text-decoration: none;
+            cursor: pointer;
         }
 
-        /* The Box Styling - ENLARGED */
         .menu-box {
             border: 1px solid var(--border-color);
-            height: 200px; /* Taller boxes */
-            padding: 30px; /* More internal space */
+            height: 140px; 
+            padding: 20px;
             display: flex;
             align-items: center; 
-            justify-content: flex-start;
-            transition: background-color 0.3s;
-            text-decoration: none;
+            justify-content: flex-start; /* Aligns content to the LEFT corner */
+            transition: all 0.3s ease;
+            background-color: transparent;
         }
         
-        .menu-box:hover {
-            background-color: rgba(0,0,0,0.03);
+        .grid-item:hover .menu-box {
+            background-color: rgba(0,0,0,0.05);
+            border-color: var(--accent-color);
         }
 
-        .menu-box h2 {
-            font-family: var(--font-serif);
-            font-size: 48px; /* Larger text inside boxes */
-            font-weight: 400;
-            margin: 0;
-            line-height: 0.9; 
-            text-transform: uppercase;
-            color: #222;
-            letter-spacing: -1px;
+        .menu-box img {
+            max-width: 90%;
+            max-height: 70%;
+            object-fit: contain;
         }
 
-        /* PROCEED Link */
+        /* --- PROCEED LINK --- */
         .proceed-link {
-            text-align: right;
-            margin-top: 15px;
-            font-size: 14px; /* Larger link text */
-            font-weight: 600;
-            letter-spacing: 2px;
+            margin-top: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-            color: #333;
+            color: #444;
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            cursor: pointer;
-            text-decoration: none;
-            align-self: flex-end; 
+            transition: color 0.3s ease;
         }
 
-        .proceed-link:hover { opacity: 0.7; }
-        
         .proceed-link svg {
-            width: 30px; /* Larger arrow */
-            height: 14px;
+            width: 18px;
+            height: 10px;
+            margin-left: 8px;
             fill: none;
             stroke: currentColor;
-            stroke-width: 1.5;
-            margin-left: 10px;
+            stroke-width: 2.5;
+            transition: transform 0.3s ease;
         }
 
-        /* --- Full Width Item (Report) --- */
+        .grid-item:hover .proceed-link {
+            color: var(--accent-color);
+        }
+
+        .grid-item:hover .proceed-link svg {
+            transform: translateX(8px);
+        }
+
         .full-width {
             grid-column: 1 / -1;
         }
 
         .full-width .menu-box {
-            height: 150px; /* Taller report bar */
+            height: 100px;
         }
 
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .menu-grid { grid-template-columns: 1fr; }
-            .text-main { font-size: 90px; }
-            .text-menu { font-size: 110px; }
-            .menu-box { height: auto; min-height: 160px; }
-            .menu-box h2 { font-size: 36px; }
+        /* --- RESPONSIVE: KEPT AS IS --- */
+        @media (max-width: 900px) {
+            .header { padding: 0 20px; }
+            /* Logo stays at the top left corner even on small screens */
+            .logo-img { width: 60px; left: 20px; margin-top: 20px; }
+            .title-main-menu { height: 100px; }
+            .title-container { margin-top: 80px; }
+            
+            /* Keeps the 3-column format even on smaller screens */
+            .menu-grid { 
+                grid-template-columns: repeat(3, 1fr); 
+                padding: 0 20px 40px 20px;
+                gap: 15px;
+            }
+            
+            .menu-box { height: 100px; padding: 10px; }
+            .proceed-link { font-size: 9px; }
+        }
+
+        /* Extra small screens adjustment to prevent overlap */
+        @media (max-width: 600px) {
+            .menu-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            .title-main-menu { height: 60px; }
         }
     </style>
 </head>
 <body>
 
     <header class="header">
-        <div class="logo-placeholder"></div>
+        <img src="assets/text/logo-img.png" alt="Logo" class="logo-img">
         
-        <div class="menu-icon">
-            <svg width="40" height="25" viewBox="0 0 30 20" fill="none" stroke="#333" stroke-width="2">
-                <line x1="0" y1="2" x2="30" y2="2" />
-                <line x1="0" y1="10" x2="30" y2="10" />
-                <line x1="0" y1="18" x2="30" y2="18" />
-            </svg>
+        <div class="title-container">
+            <img src="assets/text/title-main-menu.png" alt="Main Menu" class="title-main-menu">
         </div>
     </header>
 
-    <div class="title-container">
-        <span class="text-main">MAIN</span>
-        <span class="text-menu">Menu</span>
-    </div>
+    <main class="menu-grid">
+        <a href="publishers_title.php" class="grid-item">
+            <div class="menu-box">
+                <img src="assets/text/text-publishers-titles.png" alt="Publishers and Titles">
+            </div>
+            <div class="proceed-link">
+                PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+            </div>
+        </a>
 
-    <div class="menu-grid">
+        <a href="publisher_employee.php" class="grid-item">
+            <div class="menu-box">
+                <img src="assets/text/text-publishers-employees.png" alt="Publishers and Employees">
+            </div>
+            <div class="proceed-link">
+                PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+            </div>
+        </a>
 
-        <div class="grid-item">
-            <a href="publishers_title.php" class="menu-box">
-                <h2>Publishers &<br>Titles</h2>
-            </a>
-            <a href="publishers_title.php" class="proceed-link">
-                PROCEED
-                <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
-            </a>
-        </div>
+        <a href="authors_title.php" class="grid-item">
+            <div class="menu-box">
+                <img src="assets/text/text-authors-titles.png" alt="Authors and Titles">
+            </div>
+            <div class="proceed-link">
+                PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+            </div>
+        </a>
 
-        <div class="grid-item">
-            <a href="publisher_employee.php" class="menu-box">
-                <h2>Publishers &<br>Employees</h2>
-            </a>
-            <a href="publisher_employee.php" class="proceed-link">
-                PROCEED
-                <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
-            </a>
-        </div>
-
-        <div class="grid-item">
-            <a href="authors_title.php" class="menu-box">
-                <h2>Authors &<br>Titles</h2>
-            </a>
-            <a href="authors_title.php" class="proceed-link">
-                PROCEED
-                <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
-            </a>
-        </div>
-
-        <div class="grid-item full-width">
-            <a href="report.php" class="menu-box">
-                <h2>Report</h2>
-            </a>
-            <a href="report.php" class="proceed-link">
-                PROCEED
-                <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
-            </a>
-        </div>
-
-    </div>
+        <a href="report.php" class="grid-item full-width">
+            <div class="menu-box">
+                <img src="assets/text/text-report.png" alt="Report">
+            </div>
+            <div class="proceed-link">
+                PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+            </div>
+        </a>
+    </main>
 
 </body>
 </html>
