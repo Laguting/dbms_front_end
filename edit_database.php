@@ -5,17 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Database | Ink & Solace</title>
     <style>
-        /* Import Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Pinyon+Script&family=Montserrat:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
 
         :root {
-            --light-bg: #e6e6e6; 
-            --dark-bg: #1c202a; /* Deep Navy */
-            --text-dark: #1a1a1a;
+            --light-bg: #dbdbdb; 
+            --dark-bg: #20252d; 
             --text-white: #ffffff;
-            --font-serif: 'Cinzel', serif;
-            --font-script: 'Pinyon Script', cursive;
             --font-sans: 'Montserrat', sans-serif;
+            --banner-tint: rgba(143, 137, 137, 0.7); 
         }
 
         body, html {
@@ -25,222 +22,193 @@
             font-family: var(--font-sans);
             display: flex;
             flex-direction: column;
-            overflow-x: hidden;
+            background-color: var(--dark-bg);
+            overflow-x: hidden; 
         }
 
-        /* --- TOP SECTION (Light Header) --- */
+        /* --- TOP SECTION --- */
         .top-section {
             background-color: var(--light-bg);
-            height: 25vh; /* Takes up top portion */
-            min-height: 180px;
+            height: 25vh; 
+            min-height: 160px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             position: relative;
-            padding: 0 60px;
+            padding: 0 5%;
         }
 
-        /* Navbar elements */
         .nav-bar {
             position: absolute;
-            top: 30px;
+            top: 2vh;
             left: 0;
             width: 100%;
-            padding: 0 60px;
+            padding: 0 5%;
             box-sizing: border-box;
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            justify-content: flex-start;
             z-index: 10;
         }
 
         .custom-logo {
-            width: 100px;
+            width: 8vw;
+            min-width: 80px;
+            max-width: 120px;
             height: auto;
-            display: block;
         }
 
-        .menu-icon {
-            font-size: 32px;
-            cursor: pointer;
-            color: #333;
-            margin-top: 10px;
-        }
-
-        /* Title: MAIN Menu */
         .title-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 10px;
             width: 100%;
         }
 
-        .text-main {
-            font-family: var(--font-serif);
-            font-size: 90px;
-            font-weight: 400;
-            color: var(--text-dark);
-            letter-spacing: -2px;
-            line-height: 1;
+        .img-main-title {
+            height: 12vh;
+            max-width: 80%;
+            width: auto;
+            object-fit: contain;
         }
 
-        .text-menu {
-            font-family: var(--font-script);
-            font-size: 120px;
-            color: var(--text-dark);
-            margin-left: -15px;
-            transform: translateY(15px);
-            line-height: 1;
-        }
-
-        /* --- BOTTOM SECTION (Dark Content) --- */
+        /* --- BOTTOM SECTION --- */
         .bottom-section {
             background-color: var(--dark-bg);
             flex: 1;
-            padding: 40px 60px;
+            padding: 4vh 5%;
             display: flex;
             flex-direction: column;
             align-items: center;
-            position: relative;
         }
 
-        /* 1. Large Banner Image */
         .banner-container {
-            width: 100%;
+            width: 90%;
             max-width: 1200px;
-            height: 180px; /* Short wide banner */
+            height: 20vh; 
+            min-height: 140px; 
+            margin-bottom: 5vh;
             position: relative;
-            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             overflow: hidden;
-            margin-bottom: 50px;
-            background-color: #fff; /* White base */
+            border-radius: 15px;
+            background-color: var(--banner-tint);
         }
 
-        .banner-img {
+        .banner-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            /* Faded banner image */
-            background-image: url('https://via.placeholder.com/1400x300/dddddd/ffffff?text=');
+            background-image: url('assets/text/banner-background-bubble.png'); 
             background-size: cover;
             background-position: center;
-            opacity: 0.8; 
+            opacity: 0.2; 
+            z-index: 1;
         }
 
-        .banner-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: var(--font-serif);
-            font-size: 60px;
-            color: var(--text-dark); /* Dark text on light banner */
-            font-weight: 400;
-            z-index: 2;
-            white-space: nowrap;
+        .img-banner-label {
+            position: relative;
+            z-index: 2; 
+            height: 75%; 
+            width: auto;
+            max-width: 90%;
+            object-fit: contain;
+            filter: drop-shadow(0px 6px 12px rgba(0,0,0,0.4));
         }
 
-        /* 2. Grid of 3 Options */
         .options-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
-            width: 100%;
+            gap: 2vw;
+            width: 90%;
             max-width: 1200px;
         }
 
-        /* Option Item */
         .option-item {
             display: flex;
             flex-direction: column;
-            position: relative;
+            transition: transform 0.3s ease;
         }
 
-        /* The Box (Transparent with White Border) */
+        .option-item:hover {
+            transform: translateY(-8px);
+        }
+
         .option-box {
             border: 1px solid rgba(255, 255, 255, 0.7); 
-            height: 140px;
+            height: 20vh; /* Increased height slightly to accommodate larger text */
+            min-height: 120px;
             display: flex;
             align-items: center;
-            padding: 25px;
+            justify-content: flex-start; 
+            padding: 1.5vw 2.5vw; 
             text-decoration: none;
-            transition: background-color 0.3s;
+            box-sizing: border-box;
         }
 
-        .option-box:hover {
-            background-color: rgba(255, 255, 255, 0.05);
+        /* TEXT INSIDE BOX: Made bigger */
+        .img-option-text {
+            max-width: 100%;
+            max-height: 85%; /* Increased from 70% to 85% */
+            object-fit: contain;
         }
 
-        .option-box h2 {
-            font-family: var(--font-serif);
-            font-size: 32px;
-            color: var(--text-white); /* White Text */
-            margin: 0;
-            font-weight: 400;
-            line-height: 0.9;
-            text-transform: uppercase;
-        }
-
-        /* Proceed Link (White, Bottom Right) */
         .proceed-link {
             text-align: right;
-            margin-top: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 1px;
+            margin-top: 1vh;
+            font-size: 0.8vw;
+            min-font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1vw;
             text-transform: uppercase;
             color: var(--text-white);
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            cursor: pointer;
             text-decoration: none;
         }
 
         .proceed-link svg {
-            width: 20px;
-            height: 12px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 1.5;
-            margin-left: 8px;
+            width: 1.5vw;
+            min-width: 15px;
+            margin-left: 0.5vw;
         }
 
-        /* 3. Return Button (Pill Shape, Bottom Right) */
+        /* RETURN BUTTON CONTAINER: Moved further down */
         .return-btn-container {
-            width: 100%;
+            width: 90%;
             max-width: 1200px;
             display: flex;
             justify-content: flex-end;
-            margin-top: 40px;
+            margin-top: 10vh; /* Increased from 5vh to 10vh to move it lower */
+            padding-bottom: 5vh; /* Added padding to ensure it's not hugging the bottom of the screen */
         }
 
         .btn-return {
-            background-color: #f2f2f2; /* White/Light Gray Button */
-            color: #1c202a; /* Dark Text */
-            padding: 12px 30px;
+            background-color: #f2f2f2;
+            color: #1c202a;
+            padding: 1.2vh 2.5vw;
             border-radius: 50px;
-            border: none;
-            font-family: var(--font-sans);
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            transition: transform 0.2s;
             text-decoration: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-weight: 700;
+            font-size: 0.9vw;
+            min-font-size: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transition: transform 0.2s;
+            white-space: nowrap;
         }
 
-        .btn-return:hover {
-            transform: scale(1.05);
-        }
+        .btn-return:hover { transform: scale(1.05); }
 
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .options-grid { grid-template-columns: 1fr; }
-            .text-main { font-size: 70px; }
-            .text-menu { font-size: 90px; }
-            .banner-text { font-size: 40px; }
-            .return-btn-container { justify-content: center; }
+        @media (max-width: 800px) {
+            .proceed-link { font-size: 10px; }
+            .btn-return { font-size: 12px; }
+            .banner-container { height: 120px; }
+            .option-box { padding-left: 15px; height: 100px; }
+            .return-btn-container { margin-top: 6vh; }
         }
     </style>
 </head>
@@ -248,56 +216,47 @@
 
     <div class="top-section">
         <div class="nav-bar">
-            <img src="https://via.placeholder.com/100x100/3b4252/e6e6e6?text=LOGO" alt="Logo" class="custom-logo">
-            
-            <div class="menu-icon">
-                <svg width="40" height="25" viewBox="0 0 30 20" fill="none" stroke="#333" stroke-width="2">
-                    <line x1="0" y1="2" x2="30" y2="2" />
-                    <line x1="0" y1="10" x2="30" y2="10" />
-                    <line x1="0" y1="18" x2="30" y2="18" />
-                </svg>
-            </div>
+            <img src="assets/text/logo-img.png" alt="Ink & Solace" class="custom-logo">
         </div>
 
         <div class="title-container">
-            <span class="text-main">MAIN</span>
-            <span class="text-menu">Menu</span>
+            <img src="assets/text/title-main-menu.png" alt="Main Menu" class="img-main-title">
         </div>
     </div>
 
     <div class="bottom-section">
 
         <div class="banner-container">
-            <div class="banner-img"></div>
-            <div class="banner-text">Edit Database</div>
+            <div class="banner-bg"></div> 
+            <img src="assets/text/label-edit-database.png" alt="Edit Database" class="img-banner-label">
         </div>
 
         <div class="options-grid">
             
             <div class="option-item">
-                <a href="#" class="option-box">
-                    <h2>Publishers &<br>Titles</h2>
+                <a href="publishers_titles.php" class="option-box">
+                    <img src="assets/text/text-opt-publishers-titles.png" alt="Publishers & Titles" class="img-option-text">
                 </a>
-                <a href="#" class="proceed-link">
-                    PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
-                </a>
-            </div>
-
-            <div class="option-item">
-                <a href="#" class="option-box">
-                    <h2>Publishers &<br>Employees</h2>
-                </a>
-                <a href="#" class="proceed-link">
-                    PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+                <a href="publishers_titles.php" class="proceed-link">
+                    PROCEED <svg viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
                 </a>
             </div>
 
             <div class="option-item">
-                <a href="#" class="option-box">
-                    <h2>Authors &<br>Titles</h2>
+                <a href="publishers_employees.php" class="option-box">
+                    <img src="assets/text/text-opt-publishers-employees.png" alt="Publishers & Employees" class="img-option-text">
                 </a>
-                <a href="#" class="proceed-link">
-                    PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+                <a href="publishers_employees.php" class="proceed-link">
+                    PROCEED <svg viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M0 6L22 6M22 6L17 11"></path></svg>
+                </a>
+            </div>
+
+            <div class="option-item">
+                <a href="authors_titles.php" class="option-box">
+                    <img src="assets/text/text-opt-authors-titles.png" alt="Authors & Titles" class="img-option-text">
+                </a>
+                <a href="authors_titles.php" class="proceed-link">
+                    PROCEED <svg viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
                 </a>
             </div>
 
