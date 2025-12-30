@@ -3,145 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome Admin | Ink & Solace</title>
+    <title>Welcome | Ink & Solace</title>
     <style>
-        /* Import Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Pinyon+Script&family=Montserrat:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
 
         :root {
-            --bg-color: #e6e6e6; 
-            --text-color: #2c2c2c;
-            --font-serif: 'Cinzel', serif;
-            --font-script: 'Pinyon Script', cursive;
-            --font-sans: 'Montserrat', sans-serif;
+            --bg-color: #dbdbdb; 
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
+            width: 100%;
             background-color: var(--bg-color);
-            font-family: var(--font-sans);
-            color: var(--text-color);
-            overflow: hidden;
+            font-family: 'Montserrat', sans-serif;
+            overflow: hidden; 
             display: flex;
             flex-direction: column;
         }
 
         /* --- HEADER --- */
         .header {
-            padding: 40px 60px;
+            padding: 4vh 5vw;
             display: flex;
             justify-content: flex-start;
+            z-index: 10;
         }
 
-        /* Logo Image Style */
-        .custom-logo {
-            width: 120px; /* Adjust size as needed */
-            height: auto; /* Maintains aspect ratio */
+        .logo-img {
+            width: 10vw;
+            min-width: 80px;
+            height: auto;
             display: block;
         }
 
-        /* --- CENTER CONTENT --- */
+        /* --- MAIN CONTENT (MOVED UP) --- */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            margin-top: -80px; /* Pull up slightly for visual balance */
+            /* Changed from center to flex-start to move it to the top */
+            justify-content: flex-start; 
+            /* Adjust this value to move it higher or lower from the top */
+            padding-top: 5vh; 
             text-align: center;
+            padding-left: 5vw;
+            padding-right: 5vw;
         }
 
-        .welcome-title {
+        .welcome-container {
             display: flex;
-            align-items: baseline;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 1vh; 
         }
 
-        .text-welcome {
-            font-family: var(--font-serif);
-            font-size: 100px;
-            font-weight: 400;
-            color: #333;
+        /* Scalable Images */
+        .img-welcome {
+            height: 22vh;
+            width: auto;
+            max-width: 90vw;
+            object-fit: contain;
         }
 
-        .text-admin {
-            font-family: var(--font-script);
-            font-size: 130px;
-            margin-left: 20px;
-            color: #333;
-            transform: translateY(10px);
-        }
-
-        .subtitle {
-            font-family: var(--font-serif);
-            font-size: 32px;
-            font-weight: 500;
-            color: #444;
-            margin-top: 0;
+        .img-subtitle {
+            height: 7vh;
+            width: auto;
+            max-width: 80vw;
+            object-fit: contain;
         }
 
         /* --- BOTTOM RIGHT LINK --- */
         .proceed-container {
             position: absolute;
-            bottom: 60px;
-            right: 80px;
+            bottom: 6vh;
+            right: 6vw;
         }
 
         .proceed-link {
-            font-size: 16px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: #555;
-            text-decoration: none;
             display: flex;
             align-items: center;
-            border-bottom: 1px solid #555;
-            padding-bottom: 2px;
-            transition: opacity 0.3s;
+            text-decoration: none;
+            transition: transform 0.2s ease, opacity 0.3s;
         }
 
-        .proceed-link:hover { opacity: 0.7; }
-
-        .proceed-link svg {
-            width: 24px;
-            height: 14px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 1.5;
-            margin-left: 10px;
+        .proceed-link:hover {
+            opacity: 0.7;
+            transform: translateY(-2px);
         }
 
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .text-welcome { font-size: 60px; }
-            .text-admin { font-size: 80px; }
-            .subtitle { font-size: 24px; }
-            .proceed-container { right: 40px; bottom: 40px; }
+        .img-proceed-text {
+            height: 4vh;
+            width: auto;
+            max-width: 40vw;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-height: 500px) or (max-width: 480px) {
+            .main-content { padding-top: 2vh; }
+            .img-welcome { height: 16vh; }
+            .img-subtitle { height: 5vh; }
+            .proceed-container { 
+                right: 50%; 
+                transform: translateX(50%); 
+                bottom: 4vh; 
+            }
         }
     </style>
 </head>
 <body>
 
     <header class="header">
-        <img src="https://via.placeholder.com/120x120/3b4252/e6e6e6?text=LOGO" alt="Ink & Solace Logo" class="custom-logo">
+        <img src="assets/text/logo-img.png" alt="Ink & Solace" class="logo-img">
     </header>
 
-    <div class="main-content">
-        <div class="welcome-title">
-            <span class="text-welcome">Welcome,</span>
-            <span class="text-admin">Admin</span>
+    <main class="main-content">
+        <div class="welcome-container">
+            <img src="assets/text/text-welcome.png" alt="Welcome," class="img-welcome">
         </div>
-        <p class="subtitle">What would you like to do today?</p>
-    </div>
+        <img src="assets/text/text-subtitle.png" alt="What would you like to do today?" class="img-subtitle">
+    </main>
 
     <div class="proceed-container">
         <a href="main_menu.php" class="proceed-link">
-            PROCEED TO MAIN MENU
-            <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+            <img src="assets/text/btn-proceed-menu.png" alt="PROCEED TO MAIN MENU" class="img-proceed-text">
         </a>
     </div>
 
