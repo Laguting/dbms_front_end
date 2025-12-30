@@ -5,17 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Database | Ink & Solace</title>
     <style>
-        /* Import Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Pinyon+Script&family=Montserrat:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
 
         :root {
-            --light-bg: #e6e6e6; 
-            --dark-bg: #1c202a; /* Deep Navy */
-            --text-dark: #1a1a1a;
-            --text-white: #ffffff;
-            --font-serif: 'Cinzel', serif;
-            --font-script: 'Pinyon Script', cursive;
+            --light-bg: #dbdbdb; 
+            --dark-bg: #20252d; 
+            --text-white: #ececec;
+            --btn-blue: #3c4862; 
             --font-sans: 'Montserrat', sans-serif;
+            --banner-tint: rgba(143, 137, 137, 0.4); 
         }
 
         body, html {
@@ -25,222 +23,182 @@
             font-family: var(--font-sans);
             display: flex;
             flex-direction: column;
-            overflow-x: hidden;
+            background-color: var(--dark-bg);
+            overflow-x: hidden; 
         }
 
-        /* --- TOP SECTION (Light Header) --- */
+        /* --- TOP SECTION --- */
         .top-section {
             background-color: var(--light-bg);
-            height: 25vh; 
-            min-height: 180px;
+            height: 22vh; 
+            min-height: 140px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             position: relative;
-            padding: 0 60px;
+            padding: 0 5%;
         }
 
-        /* Navbar elements */
         .nav-bar {
             position: absolute;
-            top: 30px;
-            left: 0;
-            width: 100%;
-            padding: 0 60px;
-            box-sizing: border-box;
+            top: 2vh; 
+            left: 5%;
+            right: 5%;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: flex-start; 
             z-index: 10;
         }
 
         .custom-logo {
-            width: 100px;
+            width: 8vw;
+            min-width: 80px;
+            max-width: 120px;
             height: auto;
-            display: block;
         }
 
-        .menu-icon {
-            font-size: 32px;
-            cursor: pointer;
-            color: #333;
-            margin-top: 10px;
+        .btn-return {
+            margin-top: 13vh; 
+            background-color: var(--btn-blue);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        /* Title: MAIN Menu */
+        .btn-return:hover { 
+            background-color: #4e5e7a;
+            opacity: 0.9;
+        }
+
         .title-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 10px;
             width: 100%;
         }
 
-        .text-main {
-            font-family: var(--font-serif);
-            font-size: 90px;
-            font-weight: 400;
-            color: var(--text-dark);
-            letter-spacing: -2px;
-            line-height: 1;
+        .img-main-title {
+            height: 12vh;
+            max-width: 80%;
+            object-fit: contain;
         }
 
-        .text-menu {
-            font-family: var(--font-script);
-            font-size: 120px;
-            color: var(--text-dark);
-            margin-left: -15px;
-            transform: translateY(15px);
-            line-height: 1;
-        }
-
-        /* --- BOTTOM SECTION (Dark Content) --- */
+        /* --- BOTTOM SECTION --- */
         .bottom-section {
             background-color: var(--dark-bg);
             flex: 1;
-            padding: 40px 60px;
+            padding: 4vh 5% 5vh 5%;
             display: flex;
             flex-direction: column;
             align-items: center;
             position: relative;
         }
 
-        /* 1. Large Banner Image */
         .banner-container {
             width: 100%;
-            max-width: 1200px;
-            height: 180px; 
+            max-width: 1100px;
+            height: 20vh; 
+            margin-bottom: 6vh;
             position: relative;
-            border-radius: 15px;
-            overflow: hidden;
-            margin-bottom: 50px;
-            background-color: #fff; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: visible; 
+            border-radius: 20px;
+            background-color: var(--banner-tint);
         }
 
-        .banner-img {
+        .banner-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            /* Faded banner image - You can change this image to distinguish it from Edit */
-            background-image: url('https://via.placeholder.com/1400x300/cccccc/ffffff?text=');
+            background-image: url('assets/text/banner-background-bubble.png'); 
             background-size: cover;
             background-position: center;
-            opacity: 0.8; 
+            opacity: 0.15; 
+            border-radius: 20px;
         }
 
-        .banner-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: var(--font-serif);
-            font-size: 60px;
-            color: var(--text-dark); 
-            font-weight: 400;
-            z-index: 2;
-            white-space: nowrap;
+        .img-banner-label {
+            position: relative;
+            z-index: 2; 
+            height: 60%;
+            width: auto;
+            object-fit: contain;
+            transform: scale(2.0); 
+            filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.4));
         }
 
-        /* 2. Grid of Options */
         .options-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
+            gap: 20px;
             width: 100%;
-            max-width: 1200px;
+            max-width: 1100px;
+            margin-bottom: 30px;
+            margin-top: 2vh;
         }
 
-        /* Option Item */
         .option-item {
             display: flex;
             flex-direction: column;
-            position: relative;
+            transition: transform 0.3s ease;
         }
 
-        /* The Box (Transparent with White Border) */
+        .option-item:hover { transform: translateY(-5px); }
+
         .option-box {
-            border: 1px solid rgba(255, 255, 255, 0.7); 
+            border: 1px solid rgba(255, 255, 255, 0.8); 
             height: 140px;
             display: flex;
             align-items: center;
-            padding: 25px;
+            justify-content: flex-start; 
+            padding-left: 20px;
             text-decoration: none;
-            transition: background-color 0.3s;
+            box-sizing: border-box;
         }
 
-        .option-box:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-
-        .option-box h2 {
-            font-family: var(--font-serif);
-            font-size: 32px;
-            color: var(--text-white); 
-            margin: 0;
-            font-weight: 400;
-            line-height: 0.9;
-            text-transform: uppercase;
-        }
-
-        /* Proceed Link (White, Bottom Right) */
-        .proceed-link {
-            text-align: right;
+        .report-item {
+            width: 100%;
+            max-width: 1100px;
             margin-top: 10px;
-            font-size: 13px;
-            font-weight: 600;
+        }
+
+        .img-option-text {
+            max-height: 70%;
+            max-width: 90%;
+            object-fit: contain;
+        }
+
+        .proceed-link {
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 700;
             letter-spacing: 1px;
-            text-transform: uppercase;
             color: var(--text-white);
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            cursor: pointer;
             text-decoration: none;
         }
 
         .proceed-link svg {
-            width: 20px;
-            height: 12px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 1.5;
+            width: 18px;
             margin-left: 8px;
         }
 
-        /* 3. Return Button */
-        .return-btn-container {
-            width: 100%;
-            max-width: 1200px;
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 40px;
-        }
-
-        .btn-return {
-            background-color: #f2f2f2; 
-            color: #1c202a; 
-            padding: 12px 30px;
-            border-radius: 50px;
-            border: none;
-            font-family: var(--font-sans);
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            transition: transform 0.2s;
-            text-decoration: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .btn-return:hover {
-            transform: scale(1.05);
-        }
-
-        /* Responsive */
-        @media (max-width: 1024px) {
+        @media (max-width: 800px) {
             .options-grid { grid-template-columns: 1fr; }
-            .text-main { font-size: 70px; }
-            .text-menu { font-size: 90px; }
-            .banner-text { font-size: 40px; }
-            .return-btn-container { justify-content: center; }
+            .img-banner-label { transform: scale(1.4); }
+            .nav-bar { top: 2vh; } 
+            .btn-return { margin-top: 20px; padding: 8px 15px; font-size: 11px; }
         }
     </style>
 </head>
@@ -248,65 +206,60 @@
 
     <div class="top-section">
         <div class="nav-bar">
-            <img src="https://via.placeholder.com/100x100/3b4252/e6e6e6?text=LOGO" alt="Logo" class="custom-logo">
-            
-            <div class="menu-icon">
-                <svg width="40" height="25" viewBox="0 0 30 20" fill="none" stroke="#333" stroke-width="2">
-                    <line x1="0" y1="2" x2="30" y2="2" />
-                    <line x1="0" y1="10" x2="30" y2="10" />
-                    <line x1="0" y1="18" x2="30" y2="18" />
-                </svg>
-            </div>
+            <img src="assets/text/logo-img.png" alt="Ink & Solace" class="custom-logo">
+            <a href="main_menu.php" class="btn-return">Return to Main Menu</a>
         </div>
 
         <div class="title-container">
-            <span class="text-main">MAIN</span>
-            <span class="text-menu">Menu</span>
+            <img src="assets/text/title-main-menu.png" alt="Main Menu" class="img-main-title">
         </div>
     </div>
 
     <div class="bottom-section">
-
         <div class="banner-container">
-            <div class="banner-img"></div>
-            <div class="banner-text">View Database</div>
+            <div class="banner-bg"></div> 
+            <img src="assets/text/label-view-database.png" alt="View Database" class="img-banner-label">
         </div>
 
         <div class="options-grid">
-            
             <div class="option-item">
                 <a href="publishers_titles.php" class="option-box">
-                    <h2>Publishers &<br>Titles</h2>
+                    <img src="assets/text/text-opt-publishers-titles.png" alt="Publishers & Titles" class="img-option-text">
                 </a>
                 <a href="publishers_titles.php" class="proceed-link">
-                    PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+                    PROCEED <svg viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
                 </a>
             </div>
 
             <div class="option-item">
                 <a href="publishers_employees.php" class="option-box">
-                    <h2>Publishers &<br>Employees</h2>
+                    <img src="assets/text/text-opt-publishers-employees.png" alt="Publishers & Employees" class="img-option-text">
                 </a>
                 <a href="publishers_employees.php" class="proceed-link">
-                    PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+                    PROCEED <svg viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
                 </a>
             </div>
 
             <div class="option-item">
                 <a href="authors_titles.php" class="option-box">
-                    <h2>Authors &<br>Titles</h2>
+                    <img src="assets/text/text-opt-authors-titles.png" alt="Authors & Titles" class="img-option-text">
                 </a>
                 <a href="authors_titles.php" class="proceed-link">
-                    PROCEED <svg viewBox="0 0 24 12"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+                    PROCEED <svg viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
                 </a>
             </div>
-            
-            </div>
-
-        <div class="return-btn-container">
-            <a href="main_menu.php" class="btn-return">Return to Main Menu</a>
         </div>
 
+        <div class="report-item">
+            <div class="option-item">
+                <a href="reports.php" class="option-box">
+                    <img src="assets/text/text-opt-report.png" alt="REPORT" class="img-option-text">
+                </a>
+                <a href="reports.php" class="proceed-link">
+                    PROCEED <svg viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M0 6L22 6M22 6L17 1M22 6L17 11"></path></svg>
+                </a>
+            </div>
+        </div>
     </div>
 
 </body>
