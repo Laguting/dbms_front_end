@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Log-in | Ink & Solace</title>
     <style>
-        /* Import Fonts: Cinzel (Serif), Pinyon Script (Cursive), Montserrat (Body) */
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Pinyon+Script&family=Montserrat:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
 
         :root {
-            --bg-color: #e6e6e6; /* Light gray background */
-            --input-bg: #f2f2f2;
-            --text-color: #2c2c2c;
-            --btn-confirm: #8c827d; /* Taupe/Brownish gray */
-            --btn-return: #3b4252;  /* Dark Navy */
-            --font-serif: 'Cinzel', serif;
-            --font-script: 'Pinyon Script', cursive;
+            --bg-color: #dbdbdb;
+            --input-bg: #ececec;
+            --btn-confirm-bg: #8F8989; 
+            --btn-return-bg: #3C4862;  
         }
 
         body, html {
@@ -24,68 +20,44 @@
             height: 100%;
             background-color: var(--bg-color);
             font-family: 'Montserrat', sans-serif;
-            display: flex;
-            flex-direction: column;
+            overflow-x: hidden;
         }
 
-        /* --- HEADER (Logo & Menu) --- */
+        /* --- HEADER --- */
         .header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start; /* Align to top */
-            padding: 30px 40px;
+            align-items: flex-start;
+            padding: 15px 40px; 
         }
 
-        /* Logo Placeholder located here */
-        .logo-placeholder {
-            width: 80px;
-            height: 80px;
-            /* Replace this URL with your actual logo image */
-            background: url('https://via.placeholder.com/80x80/3b4252/e6e6e6?text=LOGO') center/contain no-repeat;
-        }
+        .logo-img { width: 80px; height: auto; }
 
-        .menu-icon {
-            font-size: 32px;
-            cursor: pointer;
-            color: #555;
-            margin-top: 10px; /* Slight adjustment to match image */
-        }
-
-        /* --- MAIN CONTENT --- */
+        /* --- MAIN CONTAINER --- */
         .main-container {
-            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            /* Added padding to prevent touching edges on small screens */
-            padding: 20px; 
-            margin-top: -80px; /* Adjusted visual lift */
+            justify-content: flex-start; 
+            padding: 20px;
+            /* Adjusted margin to account for larger admin image */
+            margin-top: -90px; 
         }
 
-        /* --- DUAL FONT TITLE --- */
         .title-container {
             display: flex;
-            align-items: baseline;
-            margin-bottom: 50px;
-            position: relative;
+            justify-content: center;
+            margin-bottom: 0px; 
+            width: 100%;
         }
 
-        .text-admin {
-            font-family: var(--font-serif);
-            font-size: 90px; /* Increased size */
-            color: var(--text-color);
-            letter-spacing: 2px;
-            font-weight: 400;
-        }
-
-        .text-login {
-            font-family: var(--font-script);
-            font-size: 110px; /* Increased size */
-            color: var(--text-color);
-            margin-left: -25px; /* Overlap the 'N' of Admin */
-            transform: translateY(8px);
-            z-index: 2;
+        /* --- ADMIN IMAGE (BIGGER) --- */
+        .img-admin { 
+            /* INCREASED: Changed height from 170px to 190px (+2 range) */
+            height: 190px; 
+            width: auto; 
+            filter: none; 
+            display: block;
         }
 
         /* --- FORM STYLING --- */
@@ -93,118 +65,118 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            /* UPDATED WIDTH: Set to 75% as requested */
-            width: 75%; 
-            /* Added a max-width so it doesn't look ridiculous on huge monitors */
-            max-width: 900px; 
+            width: 80%; 
+            max-width: 650px; 
         }
 
         .input-group {
             width: 100%;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             display: flex;
             flex-direction: column;
-            align-items: center; /* Center labels */
+            align-items: flex-start;
         }
 
-        label {
-            font-family: var(--font-serif);
-            font-size: 28px; /* Increased label size */
-            color: #444;
-            margin-bottom: 15px;
-            font-weight: 500;
-            text-transform: uppercase; /* Matches reference image */
-            letter-spacing: 1px;
+        .label-img {
+            height: 28px;
+            width: auto;
+            margin-bottom: 12px;
+            margin-left: 25px;
         }
 
+        /* --- INPUTS (SMALLER) --- */
         input {
             width: 100%;
-            /* Increased padding for larger, taller inputs */
-            padding: 20px 30px; 
-            border-radius: 50px; /* Pill shape */
+            /* DECREASED: Changed padding from 22px to 18px (-2 range) */
+            padding: 18px 35px; 
+            border-radius: 60px;
             border: none;
             background-color: var(--input-bg);
-            font-size: 18px; /* Increased input text size */
+            font-size: 18px;
             outline: none;
-            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05);
+            box-shadow: inset 3px 3px 6px rgba(0,0,0,0.06);
+            box-sizing: border-box;
             text-align: center;
         }
 
-        /* --- BUTTONS --- */
-        .btn {
-            border: none;
-            border-radius: 50px;
-            padding: 15px 70px; /* Larger buttons */
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 18px;
-            cursor: pointer;
+        /* --- BUBBLE BUTTONS (SMALLER) --- */
+        .btn-bubble {
+            display: inline-flex; 
+            align-items: center;
+            justify-content: center;
+            border-radius: 70px;
+            /* DECREASED: Changed padding from 22px 70px to 18px 60px (-2 range) */
+            padding: 18px 60px;
+            margin-top: 15px;
+            text-decoration: none;
             transition: transform 0.2s, opacity 0.2s;
-            margin-top: 20px;
-            color: white;
+            border: none;
+            cursor: pointer;
+            width: auto; 
         }
 
-        .btn:hover {
-            opacity: 0.9;
-            transform: scale(1.02);
+        .btn-confirm-bubble {
+            background-color: var(--btn-confirm-bg);
+            box-shadow: 0 6px 18px rgba(140, 130, 125, 0.4);
         }
 
-        .btn-confirm {
-            background-color: var(--btn-confirm);
-            box-shadow: 0 4px 10px rgba(140, 130, 125, 0.4);
-            margin-bottom: 15px;
+        .btn-return-bubble {
+            background-color: var(--btn-return-bg);
+            box-shadow: 0 6px 18px rgba(59, 66, 82, 0.4);
         }
 
-        .btn-return {
-            background-color: var(--btn-return);
-            box-shadow: 0 4px 10px rgba(59, 66, 82, 0.4);
-            padding: 15px 50px;
+        .btn-bubble:hover {
+            opacity: 0.95;
+            transform: scale(1.04);
         }
 
-        /* Responsive sizes for smaller screens */
+        .img-btn-text {
+            /* DECREASED: Changed height from 38px to 34px */
+            height: 34px;
+            width: auto;
+            pointer-events: none;
+            display: block;
+        }
+
+        /* Responsive adjustments */
         @media (max-width: 768px) {
-            .text-admin { font-size: 60px; }
-            .text-login { font-size: 75px; margin-left: -15px; }
-            form { width: 90%; } /* Wider on mobile */
-            label { font-size: 22px; }
-            input { padding: 15px 20px; font-size: 16px; }
+            .main-container { margin-top: -40px; }
+            .img-admin { height: 150px; } 
+            form { width: 95%; }
+            .btn-bubble { padding: 15px 45px; }
+            .img-btn-text { height: 28px; }
         }
     </style>
 </head>
 <body>
 
     <header class="header">
-        <div class="logo-placeholder"></div> 
-        <div class="menu-icon">&#9776;</div> 
+        <img src="assets/text/logo-img.png" alt="Logo" class="logo-img">
     </header>
 
     <div class="main-container">
-        
         <div class="title-container">
-            <span class="text-admin">ADMIN</span>
-            <span class="text-login">Log-in</span>
+            <img src="assets/text/text-admin.png" alt="ADMIN" class="img-admin">
         </div>
 
         <form action="" method="POST">
-            
             <div class="input-group">
-                <label for="username">Username</label>
+                <img src="assets/text/label-username.png" alt="Username" class="label-img">
                 <input type="text" id="username" name="username" required>
             </div>
 
             <div class="input-group">
-                <label for="password">Password</label>
+                <img src="assets/text/label-password.png" alt="Password" class="label-img">
                 <input type="password" id="password" name="password" required>
             </div>
 
-            <a href="admin_welcome.php">
-                <button type="button" class="btn btn-confirm">Confirm</button>
-            </a>
+            <button type="submit" class="btn-bubble btn-confirm-bubble">
+                <img src="assets/text/btn-confirm.png" alt="Confirm" class="img-btn-text">
+            </button>
             
-            <a href="index.php">
-                <button type="button" class="btn btn-return">Return to Home Page</button>
+            <a href="index.php" class="btn-bubble btn-return-bubble">
+                <img src="assets/text/btn-return.png" alt="Return to Home Page" class="img-btn-text">
             </a>
-
         </form>
     </div>
 
