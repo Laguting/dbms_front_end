@@ -188,8 +188,8 @@
         }
 
         .btn-return {
-            background-color: #f2f2f2;
-            color: #1c202a;
+            background-color: #dbdbdb;
+            color: #3c4862;
             padding: 1.2vh 2.5vw;
             border-radius: 50px;
             text-decoration: none;
