@@ -1,3 +1,10 @@
+<?php
+/**
+ * View Database Page | Ink & Solace
+ * * This file is now a PHP script. You can now add server-side logic 
+ * above the HTML or inside the body using <?php ?> tags.
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
