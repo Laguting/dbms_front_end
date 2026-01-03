@@ -1,63 +1,73 @@
 <?php
-// ==========================================
-// DATABASE CONNECTION SETTINGS (PLACEHOLDER)
-// ==========================================
-$servername = "localhost";  // Your server, usually 'localhost'
-$username   = "root";       // Your database username
-$password   = "";           // Your database password
-$dbname     = "library_db"; // Your database name
+$servername = "localhost";
+$username   = "root";
+$password   = "";
+$dbname     = "ink_and_solace";
 
-// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Variables to hold input values
 $author_search = "";
-$title_search = "";
-$insert_success = false; // Flag to track if insertion worked
+$title_search  = "";
+$insert_success = false;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Sanitize input for HTML display logic (not for SQL, we use bind_param for that)
-    $author_search = $_POST['author'] ?? "";
-    $title_search = $_POST['title'] ?? "";
+
+    $author_search = trim($_POST['author'] ?? "");
+    $title_search  = trim($_POST['title'] ?? "");
 
     if (!empty($author_search) && !empty($title_search)) {
-        // ==========================================
-        // SQL INSERT LOGIC
-        // ==========================================
-        
-        // 1. Prepare the SQL statement (Change 'books' to your actual table name)
-        $sql = "INSERT INTO books (author, title) VALUES (?, ?)";
-        
-        // 2. Initialize statement
-        $stmt = $conn->prepare($sql);
-        
-        if ($stmt) {
-            // 3. Bind parameters ("ss" means we are expecting two Strings)
-            $stmt->bind_param("ss", $author_search, $title_search);
-            
-            // 4. Execute the query
-            if ($stmt->execute()) {
+
+        /* ===========================
+           1. SPLIT AUTHOR NAME
+           =========================== */
+        $name_parts = explode(" ", $author_search, 2);
+        $au_fname = $name_parts[0];
+        $au_lname = $name_parts[1] ?? "Unknown";
+
+        /* ===========================
+           2. INSERT AUTHOR
+           =========================== */
+        $au_id = uniqid("AU"); // example: AU65fa91c2
+
+        $stmtAuthor = $conn->prepare(
+            "INSERT INTO authors (au_id, au_fname, au_lname) VALUES (?, ?, ?)"
+        );
+        $stmtAuthor->bind_param("sss", $au_id, $au_fname, $au_lname);
+
+        if ($stmtAuthor->execute()) {
+
+            /* ===========================
+               3. INSERT TITLE
+               =========================== */
+            $title_id = uniqid("T"); // example: T90321
+            $pub_id   = NULL;        // can be updated later
+            $price    = NULL;
+
+            $stmtTitle = $conn->prepare(
+                "INSERT INTO titles (title_id, title, pub_id, price)
+                 VALUES (?, ?, ?, ?)"
+            );
+            $stmtTitle->bind_param("sssd", $title_id, $title_search, $pub_id, $price);
+
+            if ($stmtTitle->execute()) {
                 $insert_success = true;
-                // Optional: Clear the input fields after successful save
                 $author_search = "";
                 $title_search = "";
-            } else {
-                echo "Error executing query: " . $stmt->error;
             }
-            $stmt->close();
-        } else {
-            echo "Error preparing statement: " . $conn->error;
+
+            $stmtTitle->close();
         }
+
+        $stmtAuthor->close();
     }
 }
 
 $conn->close();
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
