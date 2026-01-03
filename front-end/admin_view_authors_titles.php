@@ -1,75 +1,75 @@
 <?php
-// ==========================================================
-// 1. DATABASE CONNECTION
-// ==========================================================
 $servername = "localhost";
-$username   = "root";        // Your Database Username
-$password   = "";            // Your Database Password
-$dbname     = "library_db";  // Your Database Name
+$username   = "root";
+$password   = "";
+$dbname     = "ink_and_solace";
+$port       = 3307;
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($servername, $username, $password, $dbname, $port);
+if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// ==========================================================
-// 2. SEARCH LOGIC
-// ==========================================================
-$author_input = "";
-$title_input = "";
+$author_input = trim($_POST['author'] ?? "");
+$title_input  = trim($_POST['title'] ?? "");
+$found_books  = [];
 $show_results_modal = false;
 
-$found_books = []; 
-
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $author_input = trim($_POST['author'] ?? "");
-    $title_input = trim($_POST['title'] ?? "");
 
-    // Only run query if at least one field has text
-    if (!empty($author_input) || !empty($title_input)) {
-        
-        // ==========================================================
-        // SQL QUERY
-        // Matches if Author contains input OR Title contains input
-        // ==========================================================
-        // Assumed Table Name: library_books
-        // Assumed Columns: book_id, author_name, book_title
-        $sql = "SELECT * FROM library_books WHERE author_name LIKE ? OR book_title LIKE ?";
-        
-        $stmt = $conn->prepare($sql);
-        
-        if ($stmt) {
-            $auth_param = "%" . $author_input . "%";
-            $title_param = "%" . $title_input . "%";
-            
-            // Prevent empty inputs from matching everything
-            if(empty($author_input)) $auth_param = "NO_MATCH_XYZ";
-            if(empty($title_input)) $title_param = "NO_MATCH_XYZ";
+    $sql = "SELECT t.title_id, t.title, a.au_fname, a.au_lname
+            FROM titles t
+            JOIN titleauthor ta ON t.title_id = ta.title_id
+            JOIN authors a ON ta.au_id = a.au_id";
 
-            $stmt->bind_param("ss", $auth_param, $title_param);
-            $stmt->execute();
-            $result = $stmt->get_result();
+    $conditions = [];
+    $params = [];
+    $types = "";
 
-            if ($result->num_rows > 0) {
-                $show_results_modal = true;
-                
-                while($row = $result->fetch_assoc()) {
-                    $found_books[] = [
-                        "id"     => $row['book_id'],      // DB column for ID
-                        "author" => $row['author_name'],  // DB column for Author
-                        "title"  => $row['book_title']    // DB column for Title
-                    ];
-                }
-            }
-            $stmt->close();
+    if (!empty($author_input)) {
+        $conditions[] = "(a.au_fname LIKE ? OR a.au_lname LIKE ?)";
+        $params[] = "%" . $author_input . "%";
+        $params[] = "%" . $author_input . "%";
+        $types .= "ss";
+    }
+
+    if (!empty($title_input)) {
+        $conditions[] = "t.title LIKE ?";
+        $params[] = "%" . $title_input . "%";
+        $types .= "s";
+    }
+
+    if (!empty($conditions)) {
+        // Use OR between conditions, not AND
+        $sql .= " WHERE " . implode(" OR ", $conditions);
+    }
+
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
         }
+
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        while ($row = $result->fetch_assoc()) {
+            $found_books[] = [
+                "id"     => $row['title_id'],
+                "author" => $row['au_fname'] . " " . $row['au_lname'],
+                "title"  => $row['title']
+            ];
+        }
+
+        $show_results_modal = true;
+        $stmt->close();
+    } else {
+        die("SQL Prepare Error: " . $conn->error);
     }
 }
+
 $conn->close();
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="en">

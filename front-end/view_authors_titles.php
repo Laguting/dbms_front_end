@@ -3,67 +3,66 @@
 // 1. DATABASE CONNECTION
 // ==========================================================
 $servername = "localhost";
-$username   = "root";        // Your Database Username
-$password   = "";            // Your Database Password
-$dbname     = "library_db";  // Your Database Name
+$username   = "root";
+$password   = "";
+$dbname     = "ink_and_solace";
+$port       = 3307;
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+$conn = new mysqli($servername, $username, $password, $dbname, $port);
+if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 
 // ==========================================================
 // 2. SEARCH LOGIC
 // ==========================================================
 $author_search = "";
-$title_search = "";
-$has_results = false;
-$results_list = [];
+$title_search  = "";
+$has_results   = false;
+$results_list  = [];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $author_search = trim($_POST['author'] ?? "");
-    $title_search = trim($_POST['title'] ?? "");
-    
+    $title_search  = trim($_POST['title'] ?? "");
+
     // Only run query if at least one field has text
-    if(!empty($author_search) || !empty($title_search)){
-        
+    if (!empty($author_search) || !empty($title_search)) {
+
         // ==========================================================
         // SQL QUERY
-        // Matches if Author Name OR Book Title contains the input
+        // Join authors, titles, and publishers
         // ==========================================================
-        // Assumed Table Name: library_inventory
-        // Assumed Columns: isbn, book_title, author_name, publisher_name, publisher_address
-        $sql = "SELECT * FROM library_inventory WHERE author_name LIKE ? OR book_title LIKE ?";
-        
-        $stmt = $conn->prepare($sql);
-        
-        if ($stmt) {
-            // Add wildcards for partial matches
-            $auth_param = "%" . $author_search . "%";
-            $title_param = "%" . $title_search . "%";
-            
-            // Logic to handle empty inputs safely
-            if(empty($author_search)) $auth_param = "NO_MATCH_XYZ";
-            if(empty($title_search)) $title_param = "NO_MATCH_XYZ";
+        $sql = "SELECT t.title_id,
+                       t.title,
+                       CONCAT(a.au_fname, ' ', a.au_lname) AS author_name,
+                       p.pub_name AS publisher_name,
+                       t.price,
+                       t.pubdate
+                FROM titles t
+                LEFT JOIN authors a ON t.title_id = a.au_id
+                LEFT JOIN publishers p ON t.pub_id = p.pub_id
+                WHERE a.au_fname LIKE ? 
+                   OR a.au_lname LIKE ? 
+                   OR t.title LIKE ?
+                ORDER BY t.title";
 
-            $stmt->bind_param("ss", $auth_param, $title_param);
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $auth_param1 = "%" . ($author_search ?: "NO_MATCH_XYZ") . "%";
+            $auth_param2 = $auth_param1; // For last name
+            $title_param = "%" . ($title_search ?: "NO_MATCH_XYZ") . "%";
+
+            $stmt->bind_param("sss", $auth_param1, $auth_param2, $title_param);
             $stmt->execute();
             $result = $stmt->get_result();
 
             if ($result->num_rows > 0) {
                 $has_results = true;
-                
-                // Fetch data and map to array keys used in HTML
-                while($row = $result->fetch_assoc()) {
+                while ($row = $result->fetch_assoc()) {
                     $results_list[] = [
-                        'isbn'      => $row['isbn'],              // DB Column: isbn
-                        'title'     => $row['book_title'],        // DB Column: book_title
-                        'author'    => $row['author_name'],       // DB Column: author_name
-                        'publisher' => $row['publisher_name'],    // DB Column: publisher_name
-                        'address'   => $row['publisher_address']  // DB Column: publisher_address
+                        'title'     => $row['title'],
+                        'author'    => $row['author_name'] ?? "Unknown",
+                        'publisher' => $row['publisher_name'] ?? "Unknown",
+                        'price'     => $row['price'],
+                        'pubdate'   => $row['pubdate']
                     ];
                 }
             }
@@ -73,6 +72,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 $conn->close();
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
