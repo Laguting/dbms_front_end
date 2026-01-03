@@ -1,56 +1,60 @@
 <?php
-$servername = "localhost";
-$username   = "root";
-$password   = "";
+// ==========================================
+// 1. DATABASE CONNECTION SETTINGS (PLACEHOLDER)
+// ==========================================
+$servername = "localhost";   // Your server address
+$username   = "root";        // Your database username
+$password   = "";            // Your database password
 $dbname     = "ink_and_solace";
-$port       = 3307;
+$port = 3307;
 
-$conn = new mysqli($servername, $username, $password, $dbname, $port);
-if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
 
-$publisher_search = trim($_POST['publisher'] ?? "");
-$title_search     = trim($_POST['title'] ?? "");
-$insert_success   = false;
-
-if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($publisher_search) && !empty($title_search)) {
-
-    // ================= GET OR INSERT PUBLISHER =================
-    $stmtPub = $conn->prepare("SELECT pub_id FROM publishers WHERE pub_name = ?");
-    $stmtPub->bind_param("s", $publisher_search);
-    $stmtPub->execute();
-    $stmtPub->bind_result($pub_id);
-    $stmtPub->fetch();
-    $stmtPub->close();
-
-    // Publisher doesn't exist → insert it
-    if (!$pub_id) {
-        $pub_id = uniqid("P"); // Generate unique publisher ID
-        $stmtInsertPub = $conn->prepare("INSERT INTO publishers (pub_id, pub_name) VALUES (?, ?)");
-        $stmtInsertPub->bind_param("ss", $pub_id, $publisher_search);
-        $stmtInsertPub->execute();
-        $stmtInsertPub->close();
-    }
-
-    // ================= INSERT TITLE =================
-    $title_id = uniqid("T"); // Generate unique title ID
-    $stmtTitle = $conn->prepare(
-        "INSERT INTO titles (title_id, title, type, pub_id, price, advance, royalty, ytd_sales, notes, pubdate)
-         VALUES (?, ?, 'Tech', ?, 0, 0, 0, 0, '', NOW())"
-    );
-    $stmtTitle->bind_param("sss", $title_id, $title_search, $pub_id);
-    $stmtTitle->execute();
-    $stmtTitle->close();
-
-    $insert_success = true;
-
-    // Clear inputs
-    $publisher_search = "";
-    $title_search     = "";
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 
+// Initialize variables
+$publisher_search = "";
+$title_search = "";
+$insert_success = false; // Flag to check if insert worked
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $publisher_search = $_POST['publisher'] ?? "";
+    $title_search = $_POST['title'] ?? "";
+
+    if (!empty($publisher_search) && !empty($title_search)) {
+        // ==========================================
+        // 2. SQL INSERT LOGIC
+        // ==========================================
+        
+        // UPDATE THIS LINE: Change 'publishers_titles' to your actual table name
+        // Change 'publisher_name' and 'book_title' to your actual column names
+        $sql = "INSERT INTO publishers_titles (publisher_name, book_title) VALUES (?, ?)";
+        
+        $stmt = $conn->prepare($sql);
+        
+        if ($stmt) {
+            // "ss" means both inputs are Strings
+            $stmt->bind_param("ss", $publisher_search, $title_search);
+            
+            if ($stmt->execute()) {
+                $insert_success = true;
+                // Clear inputs so the form looks empty after success
+                $publisher_search = "";
+                $title_search = "";
+            } else {
+                // Uncomment below for debugging errors
+                // echo "Error: " . $stmt->error;
+            }
+            $stmt->close();
+        }
+    }
+}
 $conn->close();
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">

@@ -9,7 +9,7 @@ $dbname     = "ink_and_solace";
 $port = 3307;
 
 // Create connection
-$conn = new mysqli($servername, $username, $password, $dbname, $port);
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 // Check connection
 if ($conn->connect_error) {
