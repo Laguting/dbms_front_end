@@ -3,58 +3,67 @@
 // 1. DATABASE CONNECTION
 // ==========================================================
 $servername = "localhost";
-$username   = "root";
-$password   = "";
+$username   = "root";        // Your Database Username
+$password   = "";            // Your Database Password
 $dbname     = "ink_and_solace";
-$port       = 3307;
+$port = 3307;
 
+// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname, $port);
-if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
 // ==========================================================
 // 2. SEARCH LOGIC
 // ==========================================================
 $publisher_search = "";
-$title_search     = "";
-$has_results      = false; 
-$results_list     = [];
+$title_search = "";
+$has_results = false; 
+$results_list = [];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $publisher_search = trim($_POST['publisher'] ?? "");
     $title_search     = trim($_POST['title'] ?? "");
-
+    
     // Only search if at least one field has text
     if(!empty($publisher_search) || !empty($title_search)) {
-
+        
         // ==========================================================
-        // SQL QUERY - Join titles, publishers, authors
+        // SQL QUERY
+        // Matches if Publisher Name OR Book Title contains the input
         // ==========================================================
-        $sql = "SELECT t.title AS book_title, 
-                       p.pub_name AS publisher_name, 
-                       CONCAT(a.au_fname, ' ', a.au_lname) AS author_name
-                FROM titles t
-                LEFT JOIN publishers p ON t.pub_id = p.pub_id
-                LEFT JOIN titleauthor ta ON t.title_id = ta.title_id
-                LEFT JOIN authors a ON ta.au_id = a.au_id
-                WHERE t.title LIKE ? OR p.pub_name LIKE ?
-                ORDER BY t.title";
-
+        // Assumed Table: library_books
+        // Assumed Columns: publisher_name, book_title, author_name, book_info (e.g. '250,000 copies')
+        $sql = "SELECT * FROM library_books WHERE publisher_name LIKE ? OR book_title LIKE ?";
+        
         $stmt = $conn->prepare($sql);
+        
         if ($stmt) {
-            $title_param = "%" . ($title_search ?: "NO_MATCH_XYZ") . "%";
-            $pub_param   = "%" . ($publisher_search ?: "NO_MATCH_XYZ") . "%";
+            // Add wildcards for partial matches (e.g. "Harp" finds "HarperCollins")
+            $pub_param = "%" . $publisher_search . "%";
+            $title_param = "%" . $title_search . "%";
             
-            $stmt->bind_param("ss", $title_param, $pub_param);
+            // Logic to prevent empty inputs from matching everything unexpectedly
+            if(empty($publisher_search)) $pub_param = "NO_MATCH_XYZ";
+            if(empty($title_search)) $title_param = "NO_MATCH_XYZ";
+
+            $stmt->bind_param("ss", $pub_param, $title_param);
             $stmt->execute();
             $result = $stmt->get_result();
 
             if ($result->num_rows > 0) {
                 $has_results = true;
+                
+                // Fetch data
                 while($row = $result->fetch_assoc()) {
                     $results_list[] = [
-                        'publisher' => $row['publisher_name'] ?? "Unknown",
-                        'title'     => $row['book_title'] ?? "Unknown",
-                        'author'    => $row['author_name'] ?? "Unknown"
+                        'publisher' => $row['publisher_name'],
+                        'title'     => $row['book_title'],
+                        'author'    => $row['author_name'], // Added Author
+                        'info'      => $row['book_info']    // Added Info/Stats
                     ];
                 }
             }
@@ -64,7 +73,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 $conn->close();
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">

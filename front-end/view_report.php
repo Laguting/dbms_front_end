@@ -3,13 +3,18 @@
 // 1. DATABASE CONNECTION
 // ==========================================================
 $servername = "localhost";
-$username   = "root";
-$password   = "";
+$username   = "root";        // Your Database Username
+$password   = "";            // Your Database Password
 $dbname     = "ink_and_solace";
-$port       = 3307;
+$port = 3307;
 
+// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname, $port);
-if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
 // ==========================================================
 // 2. SEARCH LOGIC
@@ -18,59 +23,48 @@ $search_query = "";
 $search_results = [];
 $has_searched = false;
 
+// Determine if we should show results (Show all by default or only on search?)
+// Based on previous code, we show results if POST happens.
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $search_query = trim($_POST['search_query'] ?? "");
     $has_searched = true;
 
     // ==========================================================
-    // 3. SQL QUERY - JOIN titles, authors, publishers, titleauthor
+    // SQL QUERY
     // ==========================================================
+    
     if (empty($search_query)) {
-        $sql = "SELECT t.title AS book_title, 
-                       p.pub_name AS publisher_name, 
-                       CONCAT(a.au_fname, ' ', a.au_lname) AS author_name
-                FROM titles t
-                LEFT JOIN publishers p ON t.pub_id = p.pub_id
-                LEFT JOIN titleauthor ta ON t.title_id = ta.title_id
-                LEFT JOIN authors a ON ta.au_id = a.au_id
-                ORDER BY t.title";
+        // If search is empty, select ALL records (as per your previous logic)
+        $sql = "SELECT * FROM library_reports";
         $stmt = $conn->prepare($sql);
     } else {
-        $sql = "SELECT t.title AS book_title, 
-                       p.pub_name AS publisher_name, 
-                       CONCAT(a.au_fname, ' ', a.au_lname) AS author_name
-                FROM titles t
-                LEFT JOIN publishers p ON t.pub_id = p.pub_id
-                LEFT JOIN titleauthor ta ON t.title_id = ta.title_id
-                LEFT JOIN authors a ON ta.au_id = a.au_id
-                WHERE t.title LIKE ? OR p.pub_name LIKE ? OR a.au_fname LIKE ? OR a.au_lname LIKE ?
-                ORDER BY t.title";
+        // If search has text, filter by Publisher OR Author
+        $sql = "SELECT * FROM library_reports WHERE publisher_name LIKE ? OR author_name LIKE ?";
         $stmt = $conn->prepare($sql);
-
+        
         if ($stmt) {
             $param = "%" . $search_query . "%";
-            $stmt->bind_param("ssss", $param, $param, $param, $param);
+            $stmt->bind_param("ss", $param, $param);
         }
     }
 
     // Execute and Fetch
     if (isset($stmt) && $stmt->execute()) {
         $result = $stmt->get_result();
-
+        
         while ($row = $result->fetch_assoc()) {
             $search_results[] = [
-                'book'      => $row['book_title'],
-                'publisher' => $row['publisher_name'] ?? "Unknown",
-                'author'    => $row['author_name'] ?? "Unknown"
+                'publisher' => $row['publisher_name'],
+                'author'    => $row['author_name'],
+                'count'     => $row['book_count'], // e.g. "12 Books"
+                'books'     => $row['book_list']   // Long text of books
             ];
         }
         $stmt->close();
     }
 }
-
 $conn->close();
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">

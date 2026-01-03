@@ -16,7 +16,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $db_username = "root";       // Your Database Username
     $db_password = "";           // Your Database Password
     $dbname = "ink_and_solace";  // Your Database Name
-    $port = 3307;
 
     // Create connection
     $conn = new mysqli($servername, $db_username, $db_password, $dbname, $port);
@@ -34,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Prepare SQL to prevent injection
         // Assumed Table: 'admins'
         // Assumed Columns: 'id', 'username', 'password'
-        $stmt = $conn->prepare("SELECT admin_id, username, password FROM admins WHERE username = ?");
+        $stmt = $conn->prepare("SELECT id, username, password FROM admins WHERE username = ?");
         
         if ($stmt) {
             $stmt->bind_param("s", $username);
