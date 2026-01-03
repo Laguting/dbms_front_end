@@ -1,67 +1,73 @@
 <?php
+// ==========================================================
+// 1. DATABASE CONNECTION
+// ==========================================================
 $servername = "localhost";
-$username   = "root";
-$password   = "";
+$username   = "root";        // Your Database Username
+$password   = "";            // Your Database Password
 $dbname     = "ink_and_solace";
-$port       = 3307;
+$port = 3307;
 
+// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname, $port);
-if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
 
-$search_query = trim($_POST['search_query'] ?? "");
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// ==========================================================
+// 2. SEARCH LOGIC
+// ==========================================================
+$search_query = "";
 $search_results = [];
-$has_searched = ($_SERVER["REQUEST_METHOD"] == "POST");
+$has_searched = false;
 
-if ($has_searched) {
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $search_query = trim($_POST['search_query'] ?? "");
+    $has_searched = true; // Flag to show results area
 
-    // Base SQL: join titles → publishers → titleauthor → authors
-    $sql = "SELECT 
-                t.title_id, t.title, 
-                p.pub_name, 
-                a.au_fname, a.au_lname,
-                ta.au_ord
-            FROM titles t
-            LEFT JOIN publishers p ON t.pub_id = p.pub_id
-            LEFT JOIN titleauthor ta ON t.title_id = ta.title_id
-            LEFT JOIN authors a ON ta.au_id = a.au_id";
-
-    $params = [];
-    $types = "";
-    if (!empty($search_query)) {
-        // Search publisher OR author
-        $sql .= " WHERE p.pub_name LIKE ? OR a.au_fname LIKE ? OR a.au_lname LIKE ?";
-        $param = "%" . $search_query . "%";
-        $params = [$param, $param, $param];
-        $types = "sss";
+    // ==========================================================
+    // SQL QUERY LOGIC
+    // ==========================================================
+    
+    // IF search is empty, select ALL records.
+    // IF search has text, select matches in Publisher OR Author.
+    
+    if (empty($search_query)) {
+        // Fetch All
+        $sql = "SELECT * FROM reports"; // Change 'reports' to your table name
+        $stmt = $conn->prepare($sql);
+    } else {
+        // Filtered Search
+        $sql = "SELECT * FROM reports WHERE publisher_name LIKE ? OR author_name LIKE ?";
+        $stmt = $conn->prepare($sql);
+        
+        if ($stmt) {
+            $param = "%" . $search_query . "%";
+            $stmt->bind_param("ss", $param, $param);
+        }
     }
 
-    $stmt = $conn->prepare($sql);
-    if ($stmt) {
-        if (!empty($params)) {
-            $stmt->bind_param($types, ...$params);
-        }
-        $stmt->execute();
+    // Execute and Fetch
+    if (isset($stmt) && $stmt->execute()) {
         $result = $stmt->get_result();
-
+        
         while ($row = $result->fetch_assoc()) {
+            // Map DB columns to the keys expected by your HTML/JS
             $search_results[] = [
-                "id"        => $row['title_id'],
-                "publisher" => $row['pub_name'] ?? "N/A",
-                "author"    => trim($row['au_fname'] . " " . $row['au_lname']),
-                "title"     => $row['title'],
-                "count"     => $row['au_ord'] ?? 0   // <-- au_ord as count
+                "id"        => $row['id'],              // DB Column: id
+                "publisher" => $row['publisher_name'],  // DB Column: publisher_name
+                "author"    => $row['author_name'],     // DB Column: author_name
+                "count"     => $row['total_count'],     // DB Column: total_count
+                "books"     => $row['book_list']        // DB Column: book_list
             ];
         }
         $stmt->close();
-    } else {
-        die("SQL Prepare Error: " . $conn->error);
     }
 }
-
 $conn->close();
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="en">
