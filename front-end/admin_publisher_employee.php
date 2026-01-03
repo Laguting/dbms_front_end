@@ -1,73 +1,77 @@
 <?php
+// ==========================================================
+// 1. DATABASE CONNECTION
+// ==========================================================
 $servername = "localhost";
-$username   = "root";
-$password   = "";
+$username   = "root";        // Your DB Username
+$password   = "";            // Your DB Password
 $dbname     = "ink_and_solace";
-$port       = 3307;
+$port = 3307;
 
-$conn = new mysqli($servername, $username, $password, $dbname, $port);
-if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname);
 
-$publisher_input = trim($_POST['publisher'] ?? "");
-$employee_input  = trim($_POST['employee'] ?? "");
-$found_employees = [];
-$show_results_modal = false;
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $conditions = [];
-    $params = [];
-    $types = "";
-
-    // Filter by publisher if input is not empty
-    if (!empty($publisher_input)) {
-        $conditions[] = "p.pub_name LIKE ?";
-        $params[] = "%" . $publisher_input . "%";
-        $types .= "s";
-    }
-
-    // Filter by employee if input is not empty
-    if (!empty($employee_input)) {
-        $conditions[] = "(e.fname LIKE ? OR e.lname LIKE ?)";
-        $params[] = "%" . $employee_input . "%";
-        $params[] = "%" . $employee_input . "%";
-        $types .= "ss";
-    }
-
-    if (!empty($conditions)) {
-        $sql = "SELECT e.emp_id, e.fname, e.lname, j.job_desc, p.pub_id, p.pub_name
-                FROM employee e
-                LEFT JOIN publishers p ON e.pub_id = p.pub_id
-                LEFT JOIN jobs j ON e.job_id = j.job_id
-                WHERE " . implode(" AND ", $conditions); // combine with AND for proper filtering
-
-        $stmt = $conn->prepare($sql);
-        if ($stmt) {
-            // Dynamically bind parameters
-            $stmt->bind_param($types, ...$params);
-            $stmt->execute();
-            $result = $stmt->get_result();
-
-            while ($row = $result->fetch_assoc()) {
-                $found_employees[] = [
-                    "emp_id"    => $row['emp_id'],
-                    "pub_id"    => $row['pub_id'],
-                    "publisher" => $row['pub_name'] ?? "N/A",
-                    "name"      => $row['fname'] . " " . $row['lname'],
-                    "job"       => $row['job_desc'] ?? "N/A"
-                ];
-            }
-            $stmt->close();
-        } else {
-            die("SQL Prepare Error: " . $conn->error);
-        }
-    }
-    $show_results_modal = true;
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 
+// ==========================================================
+// 2. SEARCH LOGIC
+// ==========================================================
+$publisher_input = "";
+$employee_input = "";
+$show_results_modal = false;
+$found_employees = []; 
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $publisher_input = trim($_POST['publisher'] ?? "");
+    $employee_input = trim($_POST['employee'] ?? "");
+
+    // Only search if at least one field has text
+    if (!empty($publisher_input) || !empty($employee_input)) {
+        
+        // Prepare the SQL Query
+        // We search for rows where Publisher matches OR Employee matches
+        // Change table/column names below to match your database
+        $sql = "SELECT * FROM publishers_employees WHERE publisher_name LIKE ? OR employee_name LIKE ?";
+        
+        $stmt = $conn->prepare($sql);
+        
+        if ($stmt) {
+            // Add wildcards for partial matching (e.g., "Har" finds "HarperCollins")
+            $pub_param = "%" . $publisher_input . "%";
+            $emp_param = "%" . $employee_input . "%";
+            
+            // If one input is empty, we still bind it, but the OR logic handles it.
+            // However, to be cleaner, if a field is empty in the form, we essentially 
+            // want to ignore it or treat it as a wildcard depending on logic.
+            // Here we stick to simple OR logic:
+            if(empty($publisher_input)) $pub_param = "NO_MATCH_POSSIBLE_XYZ"; 
+            if(empty($employee_input)) $emp_param = "NO_MATCH_POSSIBLE_XYZ";
+
+            $stmt->bind_param("ss", $pub_param, $emp_param);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                $show_results_modal = true;
+                // Fetch all matching rows
+                while($row = $result->fetch_assoc()) {
+                    $found_employees[] = [
+                        // Map database columns to our logic variables
+                        "publisher" => $row['publisher_name'],
+                        "name"      => $row['employee_name'],
+                        "job"       => $row['job_title'] // Ensure you have this column in DB
+                    ];
+                }
+            }
+            $stmt->close();
+        }
+    }
+}
 $conn->close();
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -269,7 +273,7 @@ $conn->close();
             <label class="input-label">Publisher</label>
             <div class="input-wrapper">
                 <svg class="search-icon" viewBox="0 0 24 24"><path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zM21 21l-4.35-4.35"></path></svg>
-                <input type="text" name="publishers" placeholder="SEARCH" value="<?php echo htmlspecialchars($publisher_input); ?>">
+                <input type="text" name="publisher" placeholder="SEARCH" value="<?php echo htmlspecialchars($publisher_input); ?>">
             </div>
         </div>
         <div class="input-group">

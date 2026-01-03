@@ -3,64 +3,68 @@
 // 1. DATABASE CONNECTION
 // ==========================================================
 $servername = "localhost";
-$username   = "root";
-$password   = "";
+$username   = "root";        // Your Database Username
+$password   = "";            // Your Database Password
 $dbname     = "ink_and_solace";
-$port       = 3307;
+$port = 3307;
 
+// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname, $port);
-if ($conn->connect_error) die("Connection failed: " . $conn->connect_error);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
 // ==========================================================
 // 2. SEARCH LOGIC
 // ==========================================================
 $publisher_search = "";
-$employee_search  = "";
-$has_results      = false;
-$results_list     = [];
+$employee_search = "";
+$has_results = false;
+$results_list = [];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $publisher_search = trim($_POST['publisher'] ?? "");
     $employee_search  = trim($_POST['employee'] ?? "");
-
+    
     // Only run query if at least one field has text
     if(!empty($publisher_search) || !empty($employee_search)){
-
+        
         // ==========================================================
-        // SQL QUERY - join employees and publishers
+        // SQL QUERY
+        // Matches if Publisher Name OR Employee Name contains input
         // ==========================================================
-        $sql = "SELECT e.emp_id,
-                       CONCAT(e.fname, ' ', e.minit, ' ', e.lname) AS employee_name,
-                       e.job_id,
-                       e.job_lvl,
-                       p.pub_name AS publisher_name,
-                       e.hire_date
-                FROM employee e
-                LEFT JOIN publishers p ON e.pub_id = p.pub_id
-                WHERE e.fname LIKE ? 
-                   OR e.lname LIKE ? 
-                   OR p.pub_name LIKE ?
-                ORDER BY e.lname, e.fname";
-
+        // Assumed Table Name: employee_directory
+        // Assumed Columns: publisher_name, employee_name, job_title, department, email
+        $sql = "SELECT * FROM employee_directory WHERE publisher_name LIKE ? OR employee_name LIKE ?";
+        
         $stmt = $conn->prepare($sql);
+        
         if ($stmt) {
-            $emp_param    = "%" . ($employee_search ?: "NO_MATCH_XYZ") . "%";
-            $emp_param2   = $emp_param; // For last name
-            $pub_param    = "%" . ($publisher_search ?: "NO_MATCH_XYZ") . "%";
+            // Add wildcards for partial matches
+            $pub_param = "%" . $publisher_search . "%";
+            $emp_param = "%" . $employee_search . "%";
+            
+            // Logic to handle empty inputs safely (prevents empty string matching everything)
+            if(empty($publisher_search)) $pub_param = "NO_MATCH_XYZ";
+            if(empty($employee_search)) $emp_param = "NO_MATCH_XYZ";
 
-            $stmt->bind_param("sss", $emp_param, $emp_param2, $pub_param);
+            $stmt->bind_param("ss", $pub_param, $emp_param);
             $stmt->execute();
             $result = $stmt->get_result();
 
             if ($result->num_rows > 0) {
                 $has_results = true;
+                
+                // Fetch data and map to array keys used in HTML
                 while($row = $result->fetch_assoc()) {
                     $results_list[] = [
-                        'publisher' => $row['publisher_name'] ?? "Unknown",
+                        'publisher' => $row['publisher_name'],
                         'name'      => $row['employee_name'],
-                        'job_id'    => $row['job_id'],
-                        'job_lvl'   => $row['job_lvl'],
-                        'hire_date' => $row['hire_date']
+                        'job'       => $row['job_title'],
+                        'dept'      => $row['department'],
+                        'email'     => $row['email']
                     ];
                 }
             }
@@ -70,7 +74,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 $conn->close();
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
