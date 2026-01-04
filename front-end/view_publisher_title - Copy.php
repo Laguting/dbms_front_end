@@ -393,7 +393,7 @@ $conn->close();
 
 <div class="top-section">
     <img src="assets/text/logo.png" class="logo-top" alt="Logo">
-    <img src="assets/text/title-authors-titles.png" class="page-title-img" alt="Publishers & Authors">
+    <img src="assets/text/title-publishers-titles.png" class="page-title-img" alt="Publishers & Titles">
 </div>
 
 <div class="bottom-section">
@@ -490,4 +490,5 @@ $conn->close();
 <?php endif; ?>
 
 </body>
+
 </html>
