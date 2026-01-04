@@ -366,7 +366,7 @@ $conn->close();
     
     <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" class="search-form">
         <div class="input-group">
-            <label class="input-label">Publisher</label>
+            <label class="input-label">Author</label>
             <div class="input-wrapper">
                 <svg class="search-icon" viewBox="0 0 24 24"><path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zM21 21l-4.35-4.35"></path></svg>
                 <input type="text" name="author" placeholder="SEARCH" value="<?php echo htmlspecialchars($author_search); ?>">
@@ -468,4 +468,5 @@ $conn->close();
 <?php endif; ?>
 
 </body>
+
 </html>
