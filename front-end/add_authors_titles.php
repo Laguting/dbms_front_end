@@ -1,32 +1,98 @@
 <?php
 // ==========================================================
-// 1. PHP LOGIC (Updated for Middle Initial)
+// 1. DATABASE CONNECTION
 // ==========================================================
-$title = "";      
-$au_lname = "";
-$au_fname = "";
-$au_minit = "";   // Changed to Initial
-$phone = "";
-$address = "";
-$city = "";
-$state = "";
-$zip = "";
-$contract = "";
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "pubs_test"; 
+$port = 3307; // Ensure this matches your XAMPP port (3306 or 3307)
 
+$conn = new mysqli($servername, $username, $password, $dbname, $port);
+if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
+
+$show_modal = false;
+$success_message = "";
+
+// ==========================================================
+// 2. HANDLE FORM SUBMISSIONS
+// ==========================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $title = htmlspecialchars($_POST['title'] ?? "");
-    $au_lname = htmlspecialchars($_POST['au_lname'] ?? "");
-    $au_fname = htmlspecialchars($_POST['au_fname'] ?? "");
-    // Capture Middle Initial
-    $au_minit = htmlspecialchars($_POST['au_minit'] ?? ""); 
-    $phone = htmlspecialchars($_POST['phone'] ?? "");
-    $address = htmlspecialchars($_POST['address'] ?? "");
-    $city = htmlspecialchars($_POST['city'] ?? "");
-    $state = htmlspecialchars($_POST['state'] ?? "");
-    $zip = htmlspecialchars($_POST['zip'] ?? "");
-    $contract = htmlspecialchars($_POST['contract'] ?? "");
     
-    // SQL INSERT would go here
+    // --- STEP 1 IS HANDLED BY AJAX AT THE BOTTOM ---
+
+    // --- STEP 2: ADD TITLE ---
+    if (isset($_POST['action']) && $_POST['action'] == 'add_title') {
+        $gen_title_id = strtoupper(substr($_POST['type'], 0, 2)) . rand(1000, 9999);
+
+        $stmt = $conn->prepare("INSERT INTO titles (title_id, title, type, pub_id, price, advance, royalty, ytd_sales, notes, pubdate, au_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        
+        $stmt->bind_param("ssssddiisss", 
+            $gen_title_id, $_POST['title'], $_POST['type'], $_POST['pub_id'], $_POST['price'], 
+            $_POST['advance'], $_POST['royalty'], $_POST['ytd_sales'], $_POST['notes'], $_POST['pubdate'], $_POST['au_id']
+        );
+
+        if ($stmt->execute()) {
+            $show_modal = true;
+            $success_message = "Complete Entry Successfully Added!";
+        } else {
+            echo "<script>alert('Error: " . $stmt->error . "');</script>";
+        }
+        $stmt->close();
+    }
+}
+
+// ==========================================================
+// 3. AJAX HELPER: ADD OR FIND AUTHOR
+// ==========================================================
+if(isset($_GET['ajax_add_author'])) {
+    // Turn off error reporting for this block to ensure clean JSON
+    error_reporting(0);
+    header('Content-Type: application/json');
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    $f_name = $data['au_fname'];
+    $l_name = $data['au_lname'];
+
+    // --- A. CHECK IF AUTHOR ALREADY EXISTS ---
+    $check_stmt = $conn->prepare("SELECT au_id FROM authors WHERE au_fname = ? AND au_lname = ?");
+    $check_stmt->bind_param("ss", $f_name, $l_name);
+    $check_stmt->execute();
+    $result = $check_stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        // --- AUTHOR FOUND: REUSE ID ---
+        $row = $result->fetch_assoc();
+        echo json_encode([
+            "status" => "success", 
+            "au_id" => $row['au_id'], 
+            "message" => "Existing author found. Using existing ID."
+        ]);
+        $check_stmt->close();
+        exit; // Stop here, do not insert!
+    }
+    $check_stmt->close();
+
+    // --- B. AUTHOR NOT FOUND: INSERT NEW ---
+    $gen_id = sprintf('%03d-%02d-%04d', rand(0,999), rand(0,99), rand(0,9999));
+    $stmt = $conn->prepare("INSERT INTO authors (au_id, au_lname, au_fname, au_minit, phone, address, city, state, zip, contract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    
+    // Handle optional M.I.
+    $au_minit = $data['au_minit'] ?? ""; 
+    
+    $stmt->bind_param("sssssssssi", 
+        $gen_id, $data['au_lname'], $data['au_fname'], $au_minit, $data['phone'], 
+        $data['address'], $data['city'], $data['state'], $data['zip'], $data['contract']
+    );
+
+    if ($stmt->execute()) {
+        echo json_encode(["status" => "success", "au_id" => $gen_id]);
+    } else {
+        echo json_encode(["status" => "error", "message" => $stmt->error]);
+    }
+    $stmt->close();
+    exit;
 }
 ?>
 
@@ -35,7 +101,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Author | Ink & Solace</title>
+    <title>Add Entry | Ink & Solace</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
 
     <style>
@@ -43,337 +109,295 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             --light-bg: #dbdbdb; 
             --dark-bg: #20252d;
             --input-bg: #f2f2f2;
-            --btn-confirm: #8f8989;
-            --btn-return: #3c4862;
-            --footer-text: #666666;
-            --transition: all 0.3s ease;
+            --btn-add-color: #8f8989;    
+            --btn-return-color: #3c4862; 
+            --success-bg: #20252d;
         }
 
         * { box-sizing: border-box; }
 
         html, body {
-            margin: 0; padding: 0;
-            min-height: 100vh;
+            margin: 0; padding: 0; min-height: 100vh;
             font-family: 'Montserrat', sans-serif;
             background-color: var(--light-bg);
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
         }
 
-        /* ================= TOP SECTION ================= */
+        /* HEADER */
         .top-section {
-            background-color: var(--dark-bg);
-            min-height: 250px; 
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 30px;
+            background-color: var(--dark-bg); height: 250px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative;
         }
+        .logo-top { position: absolute; top: 20px; left: 30px; width: 150px; }
+        .page-title-img { width: 520px; max-width: 85%; height: auto; margin-top: 30px; }
+        .instruction-text { color: white; font-size: 14px; margin-top: 15px; opacity: 0.9; }
 
-        .logo-top {
-            position: absolute;
-            top: 20px; left: 30px;
-            width: 150px;
-        }
-
-        .page-title-img {
-            width: 520px;
-            max-width: 85%;
-            height: auto;
-            margin-top: 30px;
-        }
-
-        .instruction-text {
-            color: #ffffff;
-            font-family: 'Montserrat', sans-serif;
-            font-size: 14px;
-            margin-top: 15px;
-            text-align: center;
-            opacity: 0.9;
-            letter-spacing: 0.5px;
-        }
-
-        /* ================= BOTTOM SECTION ================= */
-        .bottom-section {
-            background-color: var(--light-bg);
-            flex: 1; 
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .form-container {
-            width: 100%;
-            max-width: 900px;
-        }
-
-        form {
-            width: 100%;
-        }
-
-        /* ================= GRID SYSTEM ================= */
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr; /* Two columns */
-            gap: 20px 40px; 
-            margin-bottom: 30px;
-            text-align: left;
-        }
-
-        .full-width { grid-column: 1 / -1; }
-
-        /* ================= INPUT STYLES ================= */
-        .input-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .text-label {
-            font-family: 'Cinzel', serif;
-            font-size: 16px;
-            font-weight: 700;
-            color: #444;
-            margin-bottom: 8px;
-            margin-left: 15px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        /* MAIN SELECTION AREA */
+        .selection-container {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 25px; padding: 50px;
         }
         
-        /* Style for the "Optional" text */
-        .optional-text {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 0.7em;
-            color: #777;
-            text-transform: none;
-            letter-spacing: 0;
-            margin-left: 5px;
-            font-weight: 500;
+        .big-btn {
+            padding: 20px 0; width: 320px;
+            border-radius: 50px; border: none;
+            font-family: 'Cinzel', serif; font-weight: 700; font-size: 18px;
+            color: white; cursor: pointer; text-transform: uppercase;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.25); transition: transform 0.2s;
+            text-decoration: none; display: flex; justify-content: center; align-items: center;
         }
+        .big-btn:hover { transform: scale(1.03); }
+        
+        .btn-add { background-color: var(--btn-add-color); }
+        .btn-return { background-color: var(--btn-return-color); }
 
-        .input-wrapper { position: relative; }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 12px 20px; 
-            border-radius: 50px;
-            border: 1px solid #ccc; 
-            outline: none;
-            background-color: var(--input-bg);
-            font-family: 'Montserrat', sans-serif;
-            font-size: 15px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        input:focus {
-            background-color: white;
-            border-color: #999;
-        }
-
-        /* ================= BUTTONS ================= */
-        .btn-center-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            margin-top: 10px;
-        }
-
-        .btn-confirm-wrap {
-            background-color: var(--btn-confirm);
-            border-radius: 50px;
-            padding: 10px 40px;
-            display: inline-flex;
-            cursor: pointer;
-            border: none;
-            transition: var(--transition);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-        }
-
-        .btn-return-wrap {
-            background-color: var(--btn-return);
-            border-radius: 50px;
-            padding: 12px 40px;
-            display: inline-flex;
-            cursor: pointer;
-            border: none;
-            transition: var(--transition);
-            box-shadow: 0 5px 12px rgba(0,0,0,0.2);
-        }
-
-        .btn-img-confirm { width: 80px; }
-        .btn-img-return { width: 160px; }
-
-        .btn-confirm-wrap:hover, .btn-return-wrap:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-        }
-
-        /* ================= MODAL PROMPT ================= */
+        /* MODAL FORMS */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
             display: none; justify-content: center; align-items: center; z-index: 1000;
         }
 
-        .modal-box {
-            background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px;
-            text-align: center; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        .form-card {
+            background-color: white; width: 900px; max-width: 95vw;
+            padding: 40px; border-radius: 20px; position: relative;
+            max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
 
         .close-icon {
-            position: absolute; top: 15px; right: 15px; font-size: 24px; cursor: pointer; color: #999; line-height: 1;
+            position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #555;
         }
 
-        .modal-box h2 {
-            font-family: 'Montserrat', sans-serif; color: var(--dark-bg); margin-bottom: 20px; font-size: 22px; 
+        .form-title {
+            font-family: 'Cinzel', serif; font-size: 24px; color: var(--dark-bg);
+            text-align: center; margin-bottom: 30px; border-bottom: 1px solid #ccc; padding-bottom: 10px;
         }
 
-        .success-icon { color: #4CAF50; font-size: 40px; margin-bottom: 10px; display: block; }
+        /* GRID FORM */
+        .form-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left;
+        }
+        .full-width { grid-column: 1 / -1; }
 
+        .input-group { display: flex; flex-direction: column; }
+        .text-label {
+            font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; color: #444;
+            margin-bottom: 5px; margin-left: 10px; text-transform: uppercase;
+        }
+        .table-input {
+            width: 100%; padding: 12px 20px; border-radius: 50px; border: 1px solid #ccc;
+            background-color: var(--input-bg); font-family: 'Montserrat', sans-serif; font-size: 14px;
+        }
+
+        .submit-btn-container {
+            margin-top: 30px; display: flex; justify-content: center;
+        }
+        .submit-btn {
+            color: white; border: none; background-color: var(--btn-add-color);
+            padding: 15px 50px; border-radius: 30px; font-weight: 700; cursor: pointer;
+            font-family: 'Montserrat', sans-serif; text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .submit-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+        /* SUCCESS MODAL */
+        .success-box {
+            background-color: var(--success-bg); width: 450px; padding: 40px; border-radius: 15px; text-align: center; color: white; display: flex; flex-direction: column; align-items: center; gap: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
         .btn-done {
-            background-color: var(--btn-return); color: white; border: none; padding: 10px 30px;
-            border-radius: 50px; font-family: 'Montserrat', sans-serif; font-weight: bold;
-            cursor: pointer; transition: var(--transition);
+            background-color: #f0f0f0; color: #20252d; border: none; padding: 10px 40px; border-radius: 30px; font-weight: 700; cursor: pointer;
         }
 
-        .btn-done:hover { background-color: #506180; }
-
-        @media (max-width: 700px) {
-            .form-grid { grid-template-columns: 1fr; } 
-        }
+        .hidden { display: none !important; }
     </style>
 </head>
 
 <body>
 
-<div class="modal-overlay" id="updateModal">
-    <div class="modal-box">
-        <span class="close-icon" onclick="closeModal()">&times;</span>
-        <span class="success-icon">&#10004;</span>
-        <h2>Successfully added to database!</h2>
-        <button class="btn-done" onclick="closeModal()">DONE</button>
+<div class="modal-overlay <?php echo $show_modal ? '' : 'hidden'; ?>" id="successModal" style="<?php echo $show_modal ? 'display:flex;' : ''; ?>">
+    <div class="success-box">
+        <h2 style="font-family: 'Cinzel'; margin:0; line-height:1.4;"><?php echo $success_message; ?></h2>
+        <button class="btn-done" onclick="window.location.href='admin_view_database.php'">DONE</button>
     </div>
 </div>
 
 <div class="top-section">
     <img src="assets/text/logo.png" class="logo-top" alt="Logo">
     <img src="assets/text/title-authors-titles.png" class="page-title-img" alt="Authors & Titles">
-    <p class="instruction-text">Please fill in all author details accurately to ensure data consistency.</p>
+    <p class="instruction-text">Complete the Author information first, then proceed to Title information.</p>
 </div>
 
-<div class="bottom-section">
-    <div class="form-container">
-        <form id="authorForm" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" onsubmit="return showPrompt(event)">
+<div class="selection-container">
+    <button class="big-btn btn-add" onclick="openModal('authorModal')">ADD NEW INPUT</button>
+    <a href="admin_view_database.php" class="big-btn btn-return">Return to Main Menu</a>
+</div>
 
+<div class="modal-overlay hidden" id="authorModal">
+    <div class="form-card">
+        <span class="close-icon" onclick="closeModal('authorModal')">&times;</span>
+        <div class="form-title">STEP 1: ADD NEW AUTHOR</div>
+        
+        <form id="authorForm" onsubmit="handleAuthorSubmit(event)">
             <div class="form-grid">
                 <div class="input-group">
-                    <label class="text-label">Titles</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="title" placeholder="e.g. The Great Gatsby" required>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="text-label">Phone</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="phone" placeholder="e.g. 408 496-7223" required>
-                    </div>
-                </div>
-
-                <div class="input-group">
                     <label class="text-label">First Name</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="au_fname" placeholder="Enter first name" required>
-                    </div>
+                    <input type="text" id="au_fname" name="au_fname" class="table-input" required>
                 </div>
-
-                <div class="input-group">
-                    <label class="text-label">
-                        Middle Initial 
-                        <span class="optional-text">(Optional)</span>
-                    </label>
-                    <div class="input-wrapper">
-                        <input type="text" name="au_minit" placeholder="M" maxlength="1">
-                    </div>
-                </div>
-
                 <div class="input-group">
                     <label class="text-label">Last Name</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="au_lname" placeholder="Enter last name" required>
-                    </div>
+                    <input type="text" id="au_lname" name="au_lname" class="table-input" required>
+                </div>
+                
+                <div class="input-group">
+                    <label class="text-label">M.I. (Optional)</label>
+                    <input type="text" id="au_minit" name="au_minit" class="table-input" maxlength="1">
+                </div>
+                
+                <div class="input-group">
+                    <label class="text-label">Phone</label>
+                    <input type="text" id="phone" name="phone" class="table-input" required>
+                </div>
+                <div class="input-group full-width">
+                    <label class="text-label">Address</label>
+                    <input type="text" id="address" name="address" class="table-input" required>
+                </div>
+                <div class="input-group">
+                    <label class="text-label">City</label>
+                    <input type="text" id="city" name="city" class="table-input" required>
+                </div>
+                <div class="input-group">
+                    <label class="text-label">State</label>
+                    <input type="text" id="state" name="state" class="table-input" required>
+                </div>
+                <div class="input-group">
+                    <label class="text-label">Zip Code</label>
+                    <input type="text" id="zip" name="zip" class="table-input" required>
+                </div>
+                <div class="input-group">
+                    <label class="text-label">Contract (1 or 0)</label>
+                    <input type="number" id="contract" name="contract" class="table-input" required>
+                </div>
+            </div>
+            <div class="submit-btn-container">
+                <button type="submit" class="submit-btn">CONFIRM & PROCEED TO TITLE</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="titleModal">
+    <div class="form-card">
+        <span class="close-icon" onclick="closeModal('titleModal')">&times;</span>
+        <div class="form-title">STEP 2: ADD NEW TITLE</div>
+        
+        <form method="POST">
+            <input type="hidden" name="action" value="add_title">
+            
+            <input type="hidden" name="au_id" id="hidden_au_id">
+
+            <div class="form-grid">
+                <div class="input-group full-width">
+                    <label class="text-label">Title Name</label>
+                    <input type="text" name="title" class="table-input" required>
+                </div>
+                
+                <div class="input-group">
+                    <label class="text-label">Type</label>
+                    <input type="text" name="type" class="table-input" placeholder="e.g. business" required>
+                </div>
+                <div class="input-group">
+                    <label class="text-label">Pub ID</label>
+                    <input type="text" name="pub_id" class="table-input" required>
+                </div>
+
+                <div class="input-group">
+                    <label class="text-label">Price</label>
+                    <input type="text" name="price" class="table-input">
+                </div>
+
+                <div class="input-group">
+                    <label class="text-label">Advance</label>
+                    <input type="text" name="advance" class="table-input">
+                </div>
+                <div class="input-group">
+                    <label class="text-label">Royalty</label>
+                    <input type="number" name="royalty" class="table-input">
+                </div>
+
+                <div class="input-group">
+                    <label class="text-label">YTD Sales</label>
+                    <input type="number" name="ytd_sales" class="table-input">
+                </div>
+                <div class="input-group">
+                    <label class="text-label">Pub Date</label>
+                    <input type="date" name="pubdate" class="table-input">
                 </div>
 
                 <div class="input-group full-width">
-                    <label class="text-label">Address</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="address" placeholder="Enter full street address" required>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="text-label">City</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="city" placeholder="e.g. Menlo Park" required>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="text-label">State</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="state" placeholder="e.g. CA" required>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="text-label">Zip Code</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="zip" placeholder="e.g. 94025" required>
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="text-label">Number of Contracts</label>
-                    <div class="input-wrapper">
-                        <input type="text" name="contract" placeholder="e.g. 1" required>
-                    </div>
+                    <label class="text-label">Notes</label>
+                    <input type="text" name="notes" class="table-input">
                 </div>
             </div>
-
-            <div class="btn-center-wrapper">
-                <button type="submit" class="btn-confirm-wrap">
-                    <img src="assets/text/btn-confirm.png" class="btn-img-confirm" alt="Confirm">
-                </button>
-
-                <a href="admin_view_database.php" style="text-decoration:none;">
-                    <div class="btn-return-wrap">
-                        <img src="assets/text/btn-return.png" class="btn-img-return" alt="Return to Main Menu">
-                    </div>
-                </a>
+            <div class="submit-btn-container">
+                <button type="submit" class="submit-btn" style="background-color: var(--btn-return-color);">FINISH & SAVE TITLE</button>
             </div>
-
         </form>
     </div>
 </div>
 
 <script>
-    function showPrompt(event) {
-        event.preventDefault();
-        document.getElementById('updateModal').style.display = 'flex';
-        return false; 
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+        document.getElementById(id).style.display = 'flex';
     }
 
-    function closeModal() {
-        document.getElementById('updateModal').style.display = 'none';
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+        document.getElementById(id).style.display = 'none';
+    }
+
+    // Handles Step 1 (Author) submission via AJAX
+    function handleAuthorSubmit(e) {
+        e.preventDefault(); // Stop standard form submission
+
+        // Collect data using IDs
+        const data = {
+            au_fname: document.getElementById('au_fname').value,
+            au_lname: document.getElementById('au_lname').value,
+            au_minit: document.getElementById('au_minit').value, // Can be empty
+            phone: document.getElementById('phone').value,
+            address: document.getElementById('address').value,
+            city: document.getElementById('city').value,
+            state: document.getElementById('state').value,
+            zip: document.getElementById('zip').value,
+            contract: document.getElementById('contract').value
+        };
+
+        // FIXED: Using relative path "?ajax_add_author=1" so it uses the correct current filename automatically
+        fetch('?ajax_add_author=1', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.status === 'success') {
+                // 1. Close Author Modal
+                closeModal('authorModal');
+                
+                // 2. Set the generated (or found) AU_ID in the Title Form (Hidden Input)
+                document.getElementById('hidden_au_id').value = result.au_id;
+                
+                // 3. Open Title Modal
+                openModal('titleModal');
+            } else {
+                alert('Error adding author: ' + result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An unexpected error occurred. Check console.');
+        });
     }
 </script>
 
