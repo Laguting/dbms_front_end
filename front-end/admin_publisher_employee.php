@@ -225,8 +225,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
                 $jsonData = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
             ?>
                 <button class="result-item-btn" onclick='openDetails(<?php echo $jsonData; ?>)'>
-                    <span class="res-title"><?php echo htmlspecialchars(($row['fname'] ?? '') . ' ' . ($row['lname'] ?? '')); ?></span>
-                    <span class="res-sub">Publisher: <?php echo htmlspecialchars($row['pub_name'] ?? 'Unknown'); ?></span>
+                    <span class="res-title"><?php echo htmlspecialchars($row['pub_name'] ?? 'Unknown'); ?></span>
+                    <span class="res-sub">Employee: <?php echo htmlspecialchars(($row['fname'] ?? '') . ' ' . ($row['lname'] ?? '')); ?></span>
                 </button>
             <?php endforeach; ?>
         </div>
@@ -422,7 +422,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
     }
 
     function closeSuccess() {
-        // FIXED: Reload current page dynamically
         window.location.href = window.location.pathname;
     }
 
