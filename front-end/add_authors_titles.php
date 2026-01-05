@@ -6,7 +6,7 @@ $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "pubs_test"; 
-$port = 3307; // Ensure this matches your XAMPP port (3306 or 3307)
+$port = 3307; 
 
 $conn = new mysqli($servername, $username, $password, $dbname, $port);
 if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
@@ -46,7 +46,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 // 3. AJAX HELPER: ADD OR FIND AUTHOR
 // ==========================================================
 if(isset($_GET['ajax_add_author'])) {
-    // Turn off error reporting for this block to ensure clean JSON
     error_reporting(0);
     header('Content-Type: application/json');
 
@@ -55,30 +54,24 @@ if(isset($_GET['ajax_add_author'])) {
     $f_name = $data['au_fname'];
     $l_name = $data['au_lname'];
 
-    // --- A. CHECK IF AUTHOR ALREADY EXISTS ---
+    // --- CHECK IF AUTHOR EXISTS ---
     $check_stmt = $conn->prepare("SELECT au_id FROM authors WHERE au_fname = ? AND au_lname = ?");
     $check_stmt->bind_param("ss", $f_name, $l_name);
     $check_stmt->execute();
     $result = $check_stmt->get_result();
 
     if ($result->num_rows > 0) {
-        // --- AUTHOR FOUND: REUSE ID ---
         $row = $result->fetch_assoc();
-        echo json_encode([
-            "status" => "success", 
-            "au_id" => $row['au_id'], 
-            "message" => "Existing author found. Using existing ID."
-        ]);
+        echo json_encode(["status" => "success", "au_id" => $row['au_id']]);
         $check_stmt->close();
-        exit; // Stop here, do not insert!
+        exit;
     }
     $check_stmt->close();
 
-    // --- B. AUTHOR NOT FOUND: INSERT NEW ---
+    // --- INSERT NEW AUTHOR ---
     $gen_id = sprintf('%03d-%02d-%04d', rand(0,999), rand(0,99), rand(0,9999));
     $stmt = $conn->prepare("INSERT INTO authors (au_id, au_lname, au_fname, au_minit, phone, address, city, state, zip, contract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
-    // Handle optional M.I.
     $au_minit = $data['au_minit'] ?? ""; 
     
     $stmt->bind_param("sssssssssi", 
@@ -274,7 +267,7 @@ if(isset($_GET['ajax_add_author'])) {
                     <input type="text" id="zip" name="zip" class="table-input" required>
                 </div>
                 <div class="input-group">
-                    <label class="text-label">Contract (1 or 0)</label>
+                    <label class="text-label">Contract</label>
                     <input type="number" id="contract" name="contract" class="table-input" required>
                 </div>
             </div>
@@ -294,6 +287,8 @@ if(isset($_GET['ajax_add_author'])) {
             <input type="hidden" name="action" value="add_title">
             
             <input type="hidden" name="au_id" id="hidden_au_id">
+            
+            <input type="hidden" name="pub_id" value="P004"> 
 
             <div class="form-grid">
                 <div class="input-group full-width">
@@ -304,10 +299,6 @@ if(isset($_GET['ajax_add_author'])) {
                 <div class="input-group">
                     <label class="text-label">Type</label>
                     <input type="text" name="type" class="table-input" placeholder="e.g. business" required>
-                </div>
-                <div class="input-group">
-                    <label class="text-label">Pub ID</label>
-                    <input type="text" name="pub_id" class="table-input" required>
                 </div>
 
                 <div class="input-group">
@@ -358,13 +349,12 @@ if(isset($_GET['ajax_add_author'])) {
 
     // Handles Step 1 (Author) submission via AJAX
     function handleAuthorSubmit(e) {
-        e.preventDefault(); // Stop standard form submission
+        e.preventDefault(); 
 
-        // Collect data using IDs
         const data = {
             au_fname: document.getElementById('au_fname').value,
             au_lname: document.getElementById('au_lname').value,
-            au_minit: document.getElementById('au_minit').value, // Can be empty
+            au_minit: document.getElementById('au_minit').value,
             phone: document.getElementById('phone').value,
             address: document.getElementById('address').value,
             city: document.getElementById('city').value,
@@ -373,7 +363,6 @@ if(isset($_GET['ajax_add_author'])) {
             contract: document.getElementById('contract').value
         };
 
-        // FIXED: Using relative path "?ajax_add_author=1" so it uses the correct current filename automatically
         fetch('?ajax_add_author=1', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -382,13 +371,8 @@ if(isset($_GET['ajax_add_author'])) {
         .then(response => response.json())
         .then(result => {
             if (result.status === 'success') {
-                // 1. Close Author Modal
                 closeModal('authorModal');
-                
-                // 2. Set the generated (or found) AU_ID in the Title Form (Hidden Input)
                 document.getElementById('hidden_au_id').value = result.au_id;
-                
-                // 3. Open Title Modal
                 openModal('titleModal');
             } else {
                 alert('Error adding author: ' + result.message);
@@ -396,7 +380,7 @@ if(isset($_GET['ajax_add_author'])) {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An unexpected error occurred. Check console.');
+            alert('An unexpected error occurred.');
         });
     }
 </script>
