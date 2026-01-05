@@ -1,21 +1,24 @@
 <?php
 // ==========================================================
-// 1. PHP LOGIC (Updated for 9 Columns)
+// 1. PHP LOGIC (Updated for Middle Initial)
 // ==========================================================
-$au_id = "";
+$title = "";      
 $au_lname = "";
 $au_fname = "";
+$au_minit = "";   // Changed to Initial
 $phone = "";
 $address = "";
 $city = "";
 $state = "";
 $zip = "";
-$contract = ""; // Now represents the count/number of contracts
+$contract = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $au_id = htmlspecialchars($_POST['au_id'] ?? "");
+    $title = htmlspecialchars($_POST['title'] ?? "");
     $au_lname = htmlspecialchars($_POST['au_lname'] ?? "");
     $au_fname = htmlspecialchars($_POST['au_fname'] ?? "");
+    // Capture Middle Initial
+    $au_minit = htmlspecialchars($_POST['au_minit'] ?? ""); 
     $phone = htmlspecialchars($_POST['phone'] ?? "");
     $address = htmlspecialchars($_POST['address'] ?? "");
     $city = htmlspecialchars($_POST['city'] ?? "");
@@ -23,8 +26,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $zip = htmlspecialchars($_POST['zip'] ?? "");
     $contract = htmlspecialchars($_POST['contract'] ?? "");
     
-    // NOTE: SQL INSERT Logic would go here
-    // Example: INSERT INTO authors (au_id, au_lname, contract, ...) VALUES ('$au_id', ..., '$contract')
+    // SQL INSERT would go here
 }
 ?>
 
@@ -105,7 +107,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .form-container {
             width: 100%;
-            max-width: 900px; /* Wider container for grid */
+            max-width: 900px;
         }
 
         form {
@@ -116,12 +118,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr; /* Two columns */
-            gap: 20px 40px; /* row-gap col-gap */
+            gap: 20px 40px; 
             margin-bottom: 30px;
             text-align: left;
         }
 
-        /* Make address span the full width */
         .full-width { grid-column: 1 / -1; }
 
         /* ================= INPUT STYLES ================= */
@@ -140,6 +141,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             text-transform: uppercase;
             letter-spacing: 1px;
         }
+        
+        /* Style for the "Optional" text */
+        .optional-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.7em;
+            color: #777;
+            text-transform: none;
+            letter-spacing: 0;
+            margin-left: 5px;
+            font-weight: 500;
+        }
 
         .input-wrapper { position: relative; }
 
@@ -147,7 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             width: 100%;
             padding: 12px 20px; 
             border-radius: 50px;
-            border: 1px solid #ccc; /* Subtle border added for definition */
+            border: 1px solid #ccc; 
             outline: none;
             background-color: var(--input-bg);
             font-family: 'Montserrat', sans-serif;
@@ -235,9 +247,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .btn-done:hover { background-color: #506180; }
 
-        /* Mobile Responsive */
         @media (max-width: 700px) {
-            .form-grid { grid-template-columns: 1fr; } /* Stack to 1 column on mobile */
+            .form-grid { grid-template-columns: 1fr; } 
         }
     </style>
 </head>
@@ -265,9 +276,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             <div class="form-grid">
                 <div class="input-group">
-                    <label class="text-label">Author ID</label>
+                    <label class="text-label">Titles</label>
                     <div class="input-wrapper">
-                        <input type="text" name="au_id" placeholder="e.g. 172-32-1176" required>
+                        <input type="text" name="title" placeholder="e.g. The Great Gatsby" required>
                     </div>
                 </div>
 
@@ -282,6 +293,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <label class="text-label">First Name</label>
                     <div class="input-wrapper">
                         <input type="text" name="au_fname" placeholder="Enter first name" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="text-label">
+                        Middle Initial 
+                        <span class="optional-text">(Optional)</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="text" name="au_minit" placeholder="M" maxlength="1">
                     </div>
                 </div>
 
@@ -353,9 +374,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     function closeModal() {
         document.getElementById('updateModal').style.display = 'none';
-        
-        // Optional: clear form logic
-        // document.getElementById('authorForm').reset();
     }
 </script>
 
