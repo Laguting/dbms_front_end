@@ -1,129 +1,116 @@
 <?php
 // ==========================================================
-// 1. SIMULATED DATABASE (Updated to match Image Schema)
+// 1. DATABASE CONNECTION
 // ==========================================================
-// Grouped by "Publisher" to maintain your existing layout logic
-$staff_db = [
-    "New Moon Books" => [
-        [
-            "au_id" => "172-32-1176",
-            "au_lname" => "White",
-            "au_fname" => "Johnson",
-            "phone" => "408 496-7223",
-            "address" => "10932 Bigge Rd.",
-            "city" => "Menlo Park",
-            "state" => "CA",
-            "zip" => "94025",
-            "contract" => "1" // 1 = Yes/True
-        ],
-        [
-            "au_id" => "213-46-8915",
-            "au_lname" => "Green",
-            "au_fname" => "Marjorie",
-            "phone" => "415 986-7020",
-            "address" => "309 63rd St. #411",
-            "city" => "Oakland",
-            "state" => "CA",
-            "zip" => "94618",
-            "contract" => "1"
-        ]
-    ],
-    "Binnet & Hardley" => [
-        [
-            "au_id" => "238-95-7766",
-            "au_lname" => "Carson",
-            "au_fname" => "Cheryl",
-            "phone" => "415 548-7723",
-            "address" => "589 Darwin Ln.",
-            "city" => "Berkeley",
-            "state" => "CA",
-            "zip" => "94705",
-            "contract" => "1"
-        ],
-        [
-            "au_id" => "267-41-2394",
-            "au_lname" => "O'Leary",
-            "au_fname" => "Michael",
-            "phone" => "408 286-2428",
-            "address" => "22 Cleveland Av. #14",
-            "city" => "San Jose",
-            "state" => "CA",
-            "zip" => "95128",
-            "contract" => "1"
-        ]
-    ],
-    "Algodata Infosystems" => [
-        [
-            "au_id" => "409-56-7008",
-            "au_lname" => "Bennet",
-            "au_fname" => "Abraham",
-            "phone" => "415 658-9932",
-            "address" => "6223 Bateman St.",
-            "city" => "Berkeley",
-            "state" => "CA",
-            "zip" => "94705",
-            "contract" => "0" // 0 = No/False
-        ]
-    ]
-];
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "pubs_test"; 
+$port = 3307; 
+
+$conn = new mysqli($servername, $username, $password, $dbname, $port);
+if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
 
 // ==========================================================
-// 2. SEARCH LOGIC (Updated variables)
+// 2. HANDLE AJAX REQUESTS
 // ==========================================================
-$publisher_input = "";
-$author_input = ""; // Renamed from employee_input
-$show_results_modal = false;
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
+    
+    // --- UPDATE LOGIC (Updates 2 Tables) ---
+    if ($_POST['action'] == 'update') {
+        // 1. Update AUTHOR Table
+        $sql_author = "UPDATE authors SET 
+                        au_lname=?, au_fname=?, au_minit=?, phone=?, address=?, city=?, state=?, zip=?, contract=? 
+                        WHERE au_id=?";
+        $stmt1 = $conn->prepare($sql_author);
+        $stmt1->bind_param("ssssssssis", 
+            $_POST['au_lname'], $_POST['au_fname'], $_POST['au_minit'], $_POST['phone'], 
+            $_POST['address'], $_POST['city'], $_POST['state'], $_POST['zip'], $_POST['contract'], 
+            $_POST['au_id']
+        );
+        $author_updated = $stmt1->execute();
+        $stmt1->close();
 
-$found_publisher = "";
-$found_authors = []; 
+        // 2. Update TITLE Table
+        $sql_title = "UPDATE titles SET 
+                      title=?, type=?, pub_id=?, price=?, advance=?, royalty=?, ytd_sales=?, notes=?, pubdate=? 
+                      WHERE title_id=?";
+        $stmt2 = $conn->prepare($sql_title);
+        $stmt2->bind_param("ssssdiiiss", 
+            $_POST['title'], $_POST['type'], $_POST['pub_id'], $_POST['price'], 
+            $_POST['advance'], $_POST['royalty'], $_POST['ytd_sales'], $_POST['notes'], $_POST['pubdate'], 
+            $_POST['title_id']
+        );
+        $title_updated = $stmt2->execute();
+        $stmt2->close();
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $publisher_input = trim($_POST['publisher'] ?? "");
-    $author_input = trim($_POST['author'] ?? "");
-
-    // Search Logic
-    foreach ($staff_db as $db_publisher => $db_authors_list) {
-        
-        // 1. Check if Publisher matches
-        if (!empty($publisher_input) && stripos($db_publisher, $publisher_input) !== false) {
-            $found_publisher = $db_publisher;
-            $found_authors = $db_authors_list; 
-            $show_results_modal = true;
-            break; 
+        if ($author_updated && $title_updated) { 
+            echo json_encode(["status" => "success"]); 
+        } else { 
+            echo json_encode(["status" => "error", "message" => $conn->error]); 
         }
-
-        // 2. Check if Author Last Name or First Name matches
-        if (!empty($author_input)) {
-            foreach($db_authors_list as $person) {
-                // Search in both First and Last name
-                if (stripos($person['au_lname'], $author_input) !== false || stripos($person['au_fname'], $author_input) !== false) {
-                    $found_publisher = $db_publisher;
-                    $found_authors = $db_authors_list; // Show full team for context
-                    $show_results_modal = true;
-                    break 2;
-                }
-            }
-        }
+        exit;
     }
 
-    // Fallback if not found
-    if (!$show_results_modal && (!empty($publisher_input) || !empty($author_input))) {
-        $found_publisher = $publisher_input ?: "Unknown Publisher";
-        // Create an empty skeleton for fallback
-        $found_authors = [
-            [
-                "au_id" => "N/A",
-                "au_lname" => ($author_input ?: "Unknown"),
-                "au_fname" => "Author",
-                "phone" => "N/A",
-                "address" => "N/A",
-                "city" => "N/A",
-                "state" => "N/A",
-                "zip" => "N/A",
-                "contract" => "0"
-            ]
-        ];
-        $show_results_modal = true;
+    // --- DELETE LOGIC ---
+    if ($_POST['action'] == 'delete') {
+        // Deleting Author will cascade delete Title due to FK constraint
+        $stmt = $conn->prepare("DELETE FROM authors WHERE au_id=?");
+        $stmt->bind_param("s", $_POST['au_id']);
+        
+        if ($stmt->execute()) { echo json_encode(["status" => "success"]); } 
+        else { echo json_encode(["status" => "error", "message" => $stmt->error]); }
+        $stmt->close(); exit;
+    }
+}
+
+// ==========================================================
+// 3. SEARCH LOGIC (JOIN TABLES)
+// ==========================================================
+$author_search = "";
+$title_search = "";
+$has_results = false;
+$show_no_data_modal = false;
+$results_list = [];
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
+    $author_search = trim($_POST['author_search'] ?? "");
+    $title_search = trim($_POST['title_search'] ?? "");
+    
+    if(!empty($author_search) || !empty($title_search)){
+        $sql = "SELECT t.*, a.* FROM titles t 
+                JOIN authors a ON t.au_id = a.au_id 
+                WHERE (
+                    a.au_lname LIKE ? 
+                    OR a.au_fname LIKE ? 
+                    OR CONCAT(a.au_fname, ' ', a.au_lname) LIKE ?
+                    OR CONCAT_WS(' ', a.au_fname, a.au_minit, a.au_lname) LIKE ?
+                    OR CONCAT(a.au_fname, ' ', a.au_minit, '. ', a.au_lname) LIKE ?
+                ) OR t.title LIKE ?";
+        
+        $stmt = $conn->prepare($sql);
+        $term_a = "%" . $author_search . "%";
+        $term_t = "%" . $title_search . "%";
+        
+        $param_a = empty($author_search) ? "NO_MATCH_XYZ" : $term_a;
+        $param_t = empty($title_search) ? "NO_MATCH_XYZ" : $term_t;
+        if(empty($author_search)) $param_a = $param_t; 
+        if(empty($title_search)) $param_t = $param_a;
+
+        $stmt->bind_param("ssssss", $param_a, $param_a, $param_a, $param_a, $param_a, $param_t);
+        
+        $stmt->execute();
+        $res = $stmt->get_result();
+        
+        if ($res->num_rows > 0) {
+            $has_results = true;
+            while($row = $res->fetch_assoc()) {
+                $results_list[] = $row;
+            }
+        } else {
+            $show_no_data_modal = true;
+        }
+        $stmt->close();
     }
 }
 ?>
@@ -133,446 +120,430 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authors Database | Ink & Solace</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-
+    <title>Authors & Titles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --light-bg: #dbdbdb; 
-            --dark-bg: #20252d;
-            --btn-blue: #3c4862;
-            --btn-grey: #8b8682;
-            --btn-red: #800000; 
-            --input-bg: #f0f0f0;
+            --dark-header: #20252d;
+            --body-bg: #dbdbdb;
+            --input-bg: #eeeeee;
+            --btn-search: #8b8682;
+            --btn-return: #3c4862;
+            --modal-bg: #3c4456;
+            --success-bg: #20252d;
+            --delete-btn-bg: #800000;
+            --header-font: 'Cinzel', serif;
+            --body-font: 'Montserrat', sans-serif;
         }
-
         * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; min-height: 100vh; font-family: var(--body-font); background-color: var(--body-bg); display: flex; flex-direction: column; }
 
-        html, body {
-            margin: 0; padding: 0;
-            min-height: 100vh;
-            font-family: 'Montserrat', sans-serif;
-            background-color: var(--light-bg);
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* ================= TOP & BOTTOM LAYOUT ================= */
-        .top-section {
-            background-color: var(--dark-bg);
-            min-height: 200px;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding-top: 20px;
-        }
-        .logo-top { position: absolute; top: 30px; left: 40px; width: 120px; }
-        .page-title-img { width: 520px; max-width: 80%; height: auto; margin-top: 40px; }
-
-        .bottom-section {
-            background-color: var(--light-bg);
-            flex: 1;
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-        }
-
-        /* --- SEARCH FORM --- */
-        .search-form { width: 100%; max-width: 700px; display: flex; flex-direction: column; gap: 25px; margin-bottom: 30px; }
-        .input-group { display: flex; flex-direction: column; }
-        .input-label { font-family: 'Cinzel', serif; font-size: 24px; color: #555; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; margin-left: 15px; }
-        .input-wrapper { position: relative; width: 100%; }
-        .input-wrapper input { width: 100%; padding: 15px 20px 15px 50px; border-radius: 50px; border: none; background-color: var(--input-bg); font-family: 'Montserrat', sans-serif; font-size: 16px; color: #333; outline: none; }
-        .search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; fill: none; stroke: #555; stroke-width: 2; }
+        /* HEADER & CONTENT */
+        .content-wrapper { width: 100%; display: flex; flex-direction: column; height: 100%; flex: 1; transition: filter 0.3s; }
+        .header-section { background-color: var(--dark-header); height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
         
-        .btn-container { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 20px; }
-        .btn { padding: 15px 0; width: 250px; border-radius: 50px; border: none; font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 16px; cursor: pointer; text-align: center; text-decoration: none; transition: transform 0.2s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
-        .btn:hover { transform: translateY(-2px); }
-        .btn-confirm { background-color: var(--btn-grey); color: white; }
-        .btn-return { background-color: var(--btn-blue); color: white; }
-
-        /* ================= RESULTS MODAL (LEVEL 1) ================= */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000; backdrop-filter: blur(5px); animation: fadeIn 0.3s ease-out;
-        }
-        .modal-content { display: flex; flex-direction: column; align-items: center; max-width: 90%; max-height: 90vh; position: relative; }
-        .results-heading { color: white; font-family: 'Cinzel', serif; font-size: 36px; letter-spacing: 2px; margin-bottom: 20px; font-weight: 400; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-        .titles-scroll-container { display: flex; flex-direction: column; align-items: center; gap: 15px; overflow-y: auto; max-height: 60vh; padding: 10px 20px; width: 100%; }
+        /* FIXED POSITION LOGO */
+        .logo-small { position: absolute; top: 20px; left: 30px; width: 150px; } /* Enlarged */
         
-        .result-pill-btn {
-            background-color: #918a86; color: white; padding: 25px 40px; border-radius: 60px; border: none; cursor: pointer;
-            width: 100%; min-width: 350px; max-width: 550px; text-align: center; transition: transform 0.2s, background-color 0.2s;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        .result-pill-btn:hover { transform: scale(1.02); background-color: #a39e9a; }
-        .pill-publisher { font-family: 'Cinzel', serif; font-size: 24px; text-transform: uppercase; margin-bottom: 5px; line-height: 1.2; }
-        .pill-employee { font-family: 'Montserrat', sans-serif; font-size: 18px; font-weight: 300; opacity: 0.9; }
+        /* IMAGE TITLE (Replacing Text for better alignment) */
+        .page-title-img { width: 500px; max-width: 80%; height: auto; margin-top: 10px; }
 
-        .close-btn { margin-top: 30px; background: transparent; border: 2px solid white; color: white; width: 50px; height: 50px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .close-btn:hover { background: white; color: var(--dark-bg); }
-
-        /* ================= DETAIL CARD (TABLE VIEW) ================= */
-        .detail-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.4); justify-content: center; align-items: center;
-            z-index: 2000; animation: fadeIn 0.3s ease-out;
-        }
-
-        .detail-card {
-            background-color: #3c4456; 
-            /* Increased width to fit 9 columns */
-            width: 1200px; max-width: 98%; padding: 30px; 
-            border-radius: 20px; text-align: center; position: relative; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid #5a647d;
-        }
-
-        .close-detail-x {
-            position: absolute; top: -15px; right: -15px; width: 40px; height: 40px;
-            background: white; color: #333; border-radius: 50%; font-size: 20px; font-weight: bold;
-            display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); border: 2px solid #3c4456;
-        }
-        .close-detail-x:hover { background: #f0f0f0; }
-
-        /* TABLE STYLES - UPDATED */
-        .info-table {
-            /* 1. fit-content ensures table shrinks to data size */
-            width: fit-content;
-            max-width: 100%;
-
-            /* 2. margin auto centers the table block */
-            margin: 0 auto 30px auto;
-
-            background-color: white; 
-            border-collapse: collapse; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            
-            /* Scroll settings */
-            display: block; 
-            overflow-x: auto;
-            white-space: nowrap;
-        }
-
-        .info-table th, .info-table td {
-            border: 1px solid #ddd; 
-            /* Slightly increased padding for better fit-content look */
-            padding: 12px 20px; 
-            text-align: center;
-            font-family: 'Montserrat', sans-serif; color: #333; vertical-align: middle;
-        }
-        .info-table th { background-color: white; font-weight: 600; font-size: 13px; text-transform: uppercase; }
-        .info-table td { background-color: white; font-weight: 400; font-size: 13px; }
-
-        /* Ensure wrapper centers the elements inside */
-        #editTableWrapper, #viewTableWrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
-
-        /* INPUTS IN EDIT TABLE */
-        .table-input {
-            width: 100%; min-width: 60px; border: 1px solid #ccc; padding: 6px; border-radius: 4px;
-            font-family: 'Montserrat', sans-serif; text-align: center;
-        }
-
-        .card-actions { display: flex; justify-content: center; gap: 20px; }
-        .action-btn { border: none; padding: 12px 0; width: 140px; border-radius: 30px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; text-transform: uppercase; color: white; }
-        .btn-edit-card { background-color: var(--btn-grey); }
-        .btn-delete-card { background-color: var(--btn-red); }
-
-        /* ================= SUCCESS & DELETE MODALS ================= */
-        .success-overlay, .delete-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            justify-content: center; align-items: center; animation: fadeIn 0.3s ease-out;
-        }
-        .success-overlay { z-index: 3000; }
-        .delete-overlay { z-index: 4000; }
+        /* SEARCH FORM */
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding-top: 40px; }
         
-        .success-box, .delete-box {
-            background-color: #20252d; width: 450px; max-width: 90%; padding: 50px 30px;
-            border-radius: 15px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.7);
-            border: 1px solid #444; display: flex; flex-direction: column; align-items: center; gap: 30px;
-        }
-        .success-text, .delete-text { color: white; font-family: 'Cinzel', serif; font-size: 28px; font-weight: 400; margin: 0; line-height: 1.3; }
-        .btn-done { background-color: #f0f0f0; color: #20252d; border: none; padding: 12px 60px; border-radius: 30px; font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
-        .btn-done:hover { transform: scale(1.05); background-color: white; }
+        /* ENLARGED CONTAINER */
+        .search-container { width: 100%; max-width: 800px; padding: 0 20px; }
         
-        .delete-btn-container { display: flex; gap: 20px; }
-        .btn-yes { background-color: var(--btn-grey); color: white; border: none; padding: 12px 40px; border-radius: 30px; font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; text-transform: uppercase; }
-        .btn-cancel { background-color: var(--btn-red); color: white; border: none; padding: 12px 40px; border-radius: 30px; font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; text-transform: uppercase; }
-        .btn-yes:hover, .btn-cancel:hover { filter: brightness(1.2); }
+        /* ENLARGED LABELS */
+        .search-label { 
+            font-family: var(--header-font); color: #666; 
+            font-size: 22px; 
+            margin-bottom: 12px; margin-top: 30px; 
+            text-transform: uppercase; letter-spacing: 1px; display: block; 
+        }
+        
+        .input-group { position: relative; width: 100%; margin-bottom: 30px; }
+        
+        /* ENLARGED INPUT */
+        .search-input { 
+            width: 100%; padding: 18px 22px 18px 55px; 
+            border-radius: 50px; border: none; 
+            background-color: var(--input-bg); font-family: var(--body-font); 
+            font-size: 18px; color: #333; outline: none; 
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); 
+        }
+        .search-icon { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); width: 20px; opacity: 0.5; }
+        
+        /* BUTTON WRAPPER */
+        .btn-wrapper { 
+            display: flex; flex-direction: column; align-items: center; 
+            gap: 18px; 
+            margin-top: 45px; 
+        }
+        
+        /* ENLARGED BUTTONS */
+        .btn-main { 
+            padding: 18px 0; width: 310px; 
+            border-radius: 50px; border: none; font-weight: 600; 
+            font-size: 17px; cursor: pointer; color: white; 
+            text-align: center; text-decoration: none; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: transform 0.2s; font-family: var(--body-font);
+        }
+        .btn-main:hover { transform: translateY(-2px); }
+        .btn-search { background-color: var(--btn-search); }
+        .btn-return { background-color: var(--btn-return); }
 
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        @media (max-width: 950px) {
-            .detail-card { width: 95%; padding: 20px; }
+        /* MODAL COMMON */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            display: none; justify-content: center; align-items: center; z-index: 2000; 
+            backdrop-filter: blur(8px); 
+            background-color: rgba(0, 0, 0, 0.4);
         }
+        
+        /* RESULTS LIST */
+        .results-box { display: flex; flex-direction: column; align-items: center; gap: 15px; max-height: 60vh; overflow-y: auto; padding: 20px; width: 100%; }
+        .result-item-btn { background-color: #918a86; color: white; padding: 15px; width: 400px; border-radius: 50px; border: none; cursor: pointer; text-align: center; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .result-item-btn:hover { transform: scale(1.02); background-color: #a39e9a; }
+        .res-title { font-family: var(--header-font); font-size: 18px; display: block; margin-bottom: 4px; }
+        .res-sub { font-size: 14px; opacity: 0.9; }
+
+        /* DETAIL CARD */
+        .detail-card { background-color: var(--modal-bg); width: 1400px; max-width: 95vw; max-height: 90vh; padding: 30px; border-radius: 20px; position: relative; overflow-y: auto; display: flex; flex-direction: column; gap: 30px; border: 1px solid #555; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+        .close-x { 
+            position: absolute; top: 15px; right: 15px; background: transparent; width: 35px; height: 35px; border-radius: 50%; border: 2px solid white; font-weight: bold; color: white; cursor: pointer; z-index: 10; display:flex; align-items:center; justify-content:center; font-size: 18px; transition: 0.2s;
+        }
+        .close-x:hover { background: rgba(255,255,255,0.2); }
+
+        .table-section-title { color: white; font-family: var(--header-font); font-size: 20px; border-bottom: 1px solid #777; padding-bottom: 5px; margin-bottom: 10px; }
+        .table-responsive { width: 100%; overflow-x: auto; background: white; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; font-size: 13px; color: #333; }
+        th { background: #f0f0f0; font-weight: 700; text-transform: uppercase; }
+        .table-input { width: 100%; padding: 5px; border: 1px solid #ccc; text-align: center; font-family: inherit; }
+        .action-btns { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+        
+        /* SUCCESS / DELETE MODALS */
+        .success-card, .delete-card {
+            background-color: var(--success-bg); width: 500px; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; gap: 20px;
+        }
+        .success-text, .delete-text { font-family: var(--header-font); color: white; font-size: 32px; font-weight: 400; line-height: 1.2; }
+        .btn-done { background-color: #eeeeee; color: #20252d; border: none; padding: 12px 60px; border-radius: 30px; font-family: var(--body-font); font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
+        .btn-done:hover { transform: scale(1.05); }
+        .delete-btns-wrapper { display: flex; gap: 20px; }
+        .btn-yes { background-color: var(--btn-search); color: white; border: none; padding: 12px 40px; border-radius: 30px; font-family: var(--body-font); font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
+        .btn-cancel { background-color: var(--delete-btn-bg); color: white; border: none; padding: 12px 40px; border-radius: 30px; font-family: var(--body-font); font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
+        .btn-yes:hover, .btn-cancel:hover { transform: scale(1.05); }
+
+        /* NO DATA MODAL (Dark Theme) */
+        .no-data-card {
+            background-color: var(--dark-header); 
+            width: 550px; padding: 60px 40px; border-radius: 15px;
+            text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            position: relative; display: flex; flex-direction: column; align-items: center; gap: 25px;
+        }
+        .no-data-text { 
+            font-family: var(--header-font); color: white; font-size: 26px; 
+            font-weight: 400; line-height: 1.4; letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .btn-ok { 
+            background-color: white; color: #20252d; border: none; 
+            padding: 12px 70px; border-radius: 30px; 
+            font-family: var(--body-font); font-weight: 700; font-size: 14px; 
+            cursor: pointer; text-transform: uppercase; margin-top: 10px;
+            transition: transform 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .btn-ok:hover { transform: scale(1.05); background-color: #f2f2f2; }
+
+        .hidden { display: none !important; }
     </style>
 </head>
-
 <body>
 
-<div class="top-section">
-    <img src="assets/text/logo.png" class="logo-top" alt="Logo">
-    <img src="assets/text/title-authors-titles.png" class="page-title-img" alt="Authors & Titles">
-</div>
-
-<div class="bottom-section">
-    <form method="POST" class="search-form">
-        <div class="input-group">
-            <label class="input-label">Author</label>
-            <div class="input-wrapper">
-                <svg class="search-icon" viewBox="0 0 24 24"><path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zM21 21l-4.35-4.35"></path></svg>
-                <input type="text" name="publisher" placeholder="SEARCH" value="<?php echo htmlspecialchars($publisher_input); ?>">
-            </div>
-        </div>
-        <div class="input-group">
-            <label class="input-label">Titles</label>
-            <div class="input-wrapper">
-                <svg class="search-icon" viewBox="0 0 24 24"><path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zM21 21l-4.35-4.35"></path></svg>
-                <input type="text" name="author" placeholder="SEARCH" value="<?php echo htmlspecialchars($author_input); ?>">
-            </div>
-        </div>
-        <div class="btn-container">
-            <button type="submit" class="btn btn-confirm">Confirm</button>
-            <a href="admin_view_database.php" class="btn btn-return">Return to Main Menu</a>
-        </div>
-    </form>
-</div>
-
-<?php if ($show_results_modal): ?>
-    <div class="modal-overlay" id="resultsModal">
-        <div class="modal-content">
-            <h2 class="results-heading">RESULTS:</h2>
-            <div class="titles-scroll-container">
-                <?php foreach($found_authors as $au): 
-                    // Extracting vars to keep code clean
-                    $id = $au['au_id'];
-                    $lname = $au['au_lname'];
-                    $fname = $au['au_fname'];
-                    $phone = $au['phone'];
-                    $addr = $au['address'];
-                    $city = $au['city'];
-                    $state = $au['state'];
-                    $zip = $au['zip'];
-                    $contract = $au['contract'];
-                ?>
-                    <button class="result-pill-btn" type="button" 
-                        onclick="openDetailCard(
-                            '<?php echo addslashes($id); ?>', 
-                            '<?php echo addslashes($lname); ?>', 
-                            '<?php echo addslashes($fname); ?>', 
-                            '<?php echo addslashes($phone); ?>', 
-                            '<?php echo addslashes($addr); ?>',
-                            '<?php echo addslashes($city); ?>',
-                            '<?php echo addslashes($state); ?>',
-                            '<?php echo addslashes($zip); ?>',
-                            '<?php echo addslashes($contract); ?>'
-                        )">
-                        <span class="pill-publisher"><?php echo $found_publisher; ?></span>
-                        <span class="pill-employee"><?php echo $fname . " " . $lname; ?></span>
-                    </button>
-                <?php endforeach; ?>
-            </div>
-            <button class="close-btn" onclick="document.getElementById('resultsModal').style.display='none'">
-                &times;
-            </button>
-        </div>
+<div class="content-wrapper" id="mainWrapper">
+    <div class="header-section">
+        <img src="assets/text/logo.png" class="logo-small" alt="Logo">
+        <img src="assets/text/title-authors-titles.png" class="page-title-img" alt="Authors & Titles">
     </div>
+
+    <div class="main-content">
+        <form class="search-container" method="POST">
+            <label class="search-label">AUTHOR SEARCH</label>
+            <div class="input-group">
+                <svg class="search-icon" viewBox="0 0 24 24"><path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zM21 21l-4.35-4.35" fill="none" stroke="#555" stroke-width="2"/></svg>
+                <input type="text" class="search-input" name="author_search" placeholder="Search by Author Name" value="<?php echo htmlspecialchars($author_search); ?>">
+            </div>
+
+            <label class="search-label">TITLE SEARCH</label>
+            <div class="input-group">
+                <svg class="search-icon" viewBox="0 0 24 24"><path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zM21 21l-4.35-4.35" fill="none" stroke="#555" stroke-width="2"/></svg>
+                <input type="text" class="search-input" name="title_search" placeholder="Search by Book Title" value="<?php echo htmlspecialchars($title_search); ?>">
+            </div>
+
+            <div class="btn-wrapper">
+                <button type="submit" class="btn-main btn-search">Search</button>
+                <a href="admin_view_database.php" class="btn-main btn-return">Return to Main Menu</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php if ($has_results): ?>
+<div class="modal-overlay" id="resultsModal" style="display:flex;">
+    <div style="display:flex; flex-direction:column; align-items:center;">
+        <h2 style="color:white; font-family:'Cinzel'; font-size:32px; margin-bottom:20px;">RESULTS</h2>
+        <div class="results-box">
+            <?php foreach($results_list as $row): 
+                $jsonData = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
+                $fullName = $row['au_fname'];
+                if(!empty($row['au_minit'])) {
+                    $fullName .= " " . $row['au_minit'] . ".";
+                }
+                $fullName .= " " . $row['au_lname'];
+            ?>
+                <button class="result-item-btn" onclick='openDetails(<?php echo $jsonData; ?>)'>
+                    <span class="res-title"><?php echo htmlspecialchars($row['title'] ?? 'Untitled'); ?></span>
+                    <span class="res-sub">By: <?php echo htmlspecialchars($fullName); ?></span>
+                </button>
+            <?php endforeach; ?>
+        </div>
+        <button class="close-x" style="position:relative; margin-top:20px; right:auto;" onclick="location.href='admin_view_authors_titles.php'">✕</button>
+    </div>
+</div>
 <?php endif; ?>
 
-<div class="detail-overlay" id="detailModal">
+<div class="modal-overlay" id="detailModal">
     <div class="detail-card">
-        <div class="close-detail-x" onclick="closeDetailCard()">✕</div>
-        
-        <div id="viewTableWrapper">
-            <table class="info-table">
-                <thead>
-                    <tr>
-                        <th>au_id</th>
-                        <th>au_lname</th>
-                        <th>au_fname</th>
-                        <th>phone</th>
-                        <th>address</th>
-                        <th>city</th>
-                        <th>state</th>
-                        <th>zip</th>
-                        <th>contract</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td id="td_id">...</td>
-                        <td id="td_lname">...</td>
-                        <td id="td_fname">...</td>
-                        <td id="td_phone">...</td>
-                        <td id="td_addr">...</td>
-                        <td id="td_city">...</td>
-                        <td id="td_state">...</td>
-                        <td id="td_zip">...</td>
-                        <td id="td_contract">...</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="card-actions">
-                <button class="action-btn btn-edit-card" onclick="enableEditMode()">EDIT</button>
-                <button class="action-btn btn-delete-card" onclick="askDeleteConfirmation()">DELETE</button>
+        <button class="close-x" onclick="closeDetails()">✕</button>
+
+        <div id="viewMode">
+            <div class="table-section-title">AUTHOR INFORMATION</div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>AU_ID</th><th>Last Name</th><th>First Name</th><th>M.I.</th><th>Phone</th><th>Address</th><th>City</th><th>State</th><th>Zip</th><th>Contract</th></tr></thead>
+                    <tbody><tr>
+                        <td id="v_au_id"></td><td id="v_lname"></td><td id="v_fname"></td><td id="v_minit"></td><td id="v_phone"></td><td id="v_addr"></td><td id="v_city"></td><td id="v_state"></td><td id="v_zip"></td><td id="v_contract"></td>
+                    </tr></tbody>
+                </table>
+            </div>
+
+            <div class="table-section-title" style="margin-top:20px;">TITLE INFORMATION</div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Title_ID</th><th>Title</th><th>Type</th><th>Pub_ID</th><th>Price</th><th>Advance</th><th>Royalty</th><th>YTD Sales</th><th>Notes</th><th>Pub Date</th></tr></thead>
+                    <tbody><tr>
+                        <td id="v_title_id"></td><td id="v_title"></td><td id="v_type"></td><td id="v_pub_id"></td><td id="v_price"></td><td id="v_advance"></td><td id="v_royalty"></td><td id="v_ytd"></td><td id="v_notes"></td><td id="v_pubdate"></td>
+                    </tr></tbody>
+                </table>
+            </div>
+
+            <div class="action-btns">
+                <button class="btn-main btn-search" style="width:150px;" onclick="enableEdit()">EDIT</button>
+                <button class="btn-main btn-return" style="width:150px; background-color:#800000;" onclick="deleteRecord()">DELETE</button>
             </div>
         </div>
 
-        <div id="editTableWrapper" style="display: none;">
-            <table class="info-table">
-                <thead>
-                    <tr>
-                        <th>au_id</th>
-                        <th>au_lname</th>
-                        <th>au_fname</th>
-                        <th>phone</th>
-                        <th>address</th>
-                        <th>city</th>
-                        <th>state</th>
-                        <th>zip</th>
-                        <th>contract</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><input type="text" id="input_id" class="table-input"></td>
-                        <td><input type="text" id="input_lname" class="table-input"></td>
-                        <td><input type="text" id="input_fname" class="table-input"></td>
-                        <td><input type="text" id="input_phone" class="table-input"></td>
-                        <td><input type="text" id="input_addr" class="table-input"></td>
-                        <td><input type="text" id="input_city" class="table-input"></td>
-                        <td><input type="text" id="input_state" class="table-input"></td>
-                        <td><input type="text" id="input_zip" class="table-input"></td>
-                        <td><input type="text" id="input_contract" class="table-input"></td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="card-actions">
-                <button class="action-btn btn-edit-card" onclick="saveChanges()">SAVE</button>
-                <button class="action-btn btn-delete-card" onclick="cancelEditMode()">CANCEL</button>
+        <div id="editMode" class="hidden">
+            <div class="table-section-title">EDIT AUTHOR</div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>AU_ID</th><th>Last Name</th><th>First Name</th><th>MI</th><th>Phone</th><th>Address</th><th>City</th><th>State</th><th>Zip</th><th>Contract</th></tr></thead>
+                    <tbody><tr>
+                        <td><input id="e_au_id" class="table-input" readonly style="background-color: #eee; cursor: not-allowed; color: #555;"></td>
+                        <td><input id="e_lname" class="table-input"></td>
+                        <td><input id="e_fname" class="table-input"></td>
+                        <td><input id="e_minit" class="table-input" maxlength="1"></td>
+                        <td><input id="e_phone" class="table-input"></td>
+                        <td><input id="e_addr" class="table-input"></td>
+                        <td><input id="e_city" class="table-input"></td>
+                        <td><input id="e_state" class="table-input"></td>
+                        <td><input id="e_zip" class="table-input"></td>
+                        <td><input id="e_contract" class="table-input"></td>
+                    </tr></tbody>
+                </table>
+            </div>
+
+            <div class="table-section-title" style="margin-top:20px;">EDIT TITLE</div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Title_ID</th><th>Title</th><th>Type</th><th>Pub_ID</th><th>Price</th><th>Advance</th><th>Royalty</th><th>YTD Sales</th><th>Notes</th><th>Pub Date</th></tr></thead>
+                    <tbody><tr>
+                        <td><input id="e_title_id" class="table-input" readonly style="background-color: #eee; cursor: not-allowed; color: #555;"></td>
+                        <td><input id="e_title" class="table-input"></td>
+                        <td><input id="e_type" class="table-input"></td>
+                        <td><input id="e_pub_id" class="table-input"></td>
+                        <td><input id="e_price" class="table-input"></td>
+                        <td><input id="e_advance" class="table-input"></td>
+                        <td><input id="e_royalty" class="table-input"></td>
+                        <td><input id="e_ytd" class="table-input"></td>
+                        <td><input id="e_notes" class="table-input"></td>
+                        <td><input id="e_pubdate" class="table-input"></td>
+                    </tr></tbody>
+                </table>
+            </div>
+
+            <div class="action-btns">
+                <button class="btn-main btn-search" style="width:150px;" onclick="saveData()">SAVE</button>
+                <button class="btn-main btn-return" style="width:150px; background-color:#800000;" onclick="cancelEdit()">CANCEL</button>
             </div>
         </div>
-
     </div>
 </div>
 
-<div class="delete-overlay" id="deleteConfirmModal">
-    <div class="delete-box">
-        <h2 class="delete-text">Are you sure you want to delete this author?</h2>
-        <div class="delete-btn-container">
+<div class="modal-overlay hidden" id="successModal" style="z-index: 3000;">
+    <div class="success-card">
+        <button class="close-x" onclick="closeSuccess()">✕</button>
+        <div class="success-text" id="successMessage">Entry successfully edited.</div>
+        <button class="btn-done" onclick="closeSuccess()">DONE</button>
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="deleteModal" style="z-index: 3000;">
+    <div class="delete-card">
+        <button class="close-x" onclick="closeDeleteModal()">✕</button>
+        <div class="delete-text">Are you sure you want to delete this?</div>
+        <div class="delete-btns-wrapper">
             <button class="btn-yes" onclick="confirmDelete()">YES</button>
-            <button class="btn-cancel" onclick="closeDeleteConfirmation()">CANCEL</button>
+            <button class="btn-cancel" onclick="closeDeleteModal()">CANCEL</button>
         </div>
     </div>
 </div>
 
-<div class="success-overlay" id="successModal">
-    <div class="success-box">
-        <h2 class="success-text" id="successMessageText">Entry successfully edited.</h2>
-        <button class="btn-done" onclick="closeSuccessModal()">DONE</button>
+<div class="modal-overlay hidden" id="noDataModal" style="z-index: 3000;">
+    <div class="no-data-card">
+        <button class="close-x" onclick="closeNoData()">✕</button>
+        <div class="no-data-text">NO RECORDS FOUND<br>MATCHING YOUR SEARCH.</div>
+        <button class="btn-ok" onclick="closeNoData()">OK</button>
     </div>
 </div>
 
 <script>
-    // 1. OPEN MODAL (Handles 9 arguments now)
-    function openDetailCard(id, lname, fname, phone, addr, city, state, zip, contract) {
-        cancelEditMode(); 
-        
-        // Fill View Data
-        document.getElementById('td_id').innerText = id;
-        document.getElementById('td_lname').innerText = lname;
-        document.getElementById('td_fname').innerText = fname;
-        document.getElementById('td_phone').innerText = phone;
-        document.getElementById('td_addr').innerText = addr;
-        document.getElementById('td_city').innerText = city;
-        document.getElementById('td_state').innerText = state;
-        document.getElementById('td_zip').innerText = zip;
-        document.getElementById('td_contract').innerText = contract;
-        
+    let currentData = {};
+
+    function openDetails(data) {
+        currentData = data;
+        document.getElementById('resultsModal').classList.add('hidden');
         document.getElementById('detailModal').style.display = 'flex';
+
+        document.getElementById('v_au_id').innerText = data.au_id;
+        document.getElementById('v_lname').innerText = data.au_lname;
+        document.getElementById('v_fname').innerText = data.au_fname;
+        document.getElementById('v_minit').innerText = data.au_minit || ''; 
+        document.getElementById('v_phone').innerText = data.phone;
+        document.getElementById('v_addr').innerText = data.address;
+        document.getElementById('v_city').innerText = data.city;
+        document.getElementById('v_state').innerText = data.state;
+        document.getElementById('v_zip').innerText = data.zip;
+        document.getElementById('v_contract').innerText = data.contract;
+
+        document.getElementById('v_title_id').innerText = data.title_id;
+        document.getElementById('v_title').innerText = data.title;
+        document.getElementById('v_type').innerText = data.type;
+        document.getElementById('v_pub_id').innerText = data.pub_id;
+        document.getElementById('v_price').innerText = data.price;
+        document.getElementById('v_advance').innerText = data.advance;
+        document.getElementById('v_royalty').innerText = data.royalty;
+        document.getElementById('v_ytd').innerText = data.ytd_sales;
+        document.getElementById('v_notes').innerText = data.notes;
+        document.getElementById('v_pubdate').innerText = data.pubdate;
     }
 
-    // 2. CLOSE MODAL
-    function closeDetailCard() {
+    function closeDetails() {
         document.getElementById('detailModal').style.display = 'none';
+        document.getElementById('resultsModal').classList.remove('hidden');
+        cancelEdit();
     }
 
-    // 3. ENABLE EDIT MODE
-    function enableEditMode() {
-        // Copy text from View Table to Edit Table Inputs
-        document.getElementById('input_id').value = document.getElementById('td_id').innerText;
-        document.getElementById('input_lname').value = document.getElementById('td_lname').innerText;
-        document.getElementById('input_fname').value = document.getElementById('td_fname').innerText;
-        document.getElementById('input_phone').value = document.getElementById('td_phone').innerText;
-        document.getElementById('input_addr').value = document.getElementById('td_addr').innerText;
-        document.getElementById('input_city').value = document.getElementById('td_city').innerText;
-        document.getElementById('input_state').value = document.getElementById('td_state').innerText;
-        document.getElementById('input_zip').value = document.getElementById('td_zip').innerText;
-        document.getElementById('input_contract').value = document.getElementById('td_contract').innerText;
+    function enableEdit() {
+        document.getElementById('viewMode').classList.add('hidden');
+        document.getElementById('editMode').classList.remove('hidden');
 
-        document.getElementById('viewTableWrapper').style.display = 'none';
-        document.getElementById('editTableWrapper').style.display = 'block';
+        const map = {
+            'e_au_id': currentData.au_id, 'e_lname': currentData.au_lname, 'e_fname': currentData.au_fname, 'e_minit': currentData.au_minit,
+            'e_phone': currentData.phone, 'e_addr': currentData.address, 'e_city': currentData.city, 'e_state': currentData.state,
+            'e_zip': currentData.zip, 'e_contract': currentData.contract, 'e_title_id': currentData.title_id, 'e_title': currentData.title,
+            'e_type': currentData.type, 'e_pub_id': currentData.pub_id, 'e_price': currentData.price, 'e_advance': currentData.advance,
+            'e_royalty': currentData.royalty, 'e_ytd': currentData.ytd_sales, 'e_notes': currentData.notes, 'e_pubdate': currentData.pubdate
+        };
+        for(let id in map) document.getElementById(id).value = map[id] || '';
     }
 
-    // 4. CANCEL EDIT MODE
-    function cancelEditMode() {
-        document.getElementById('editTableWrapper').style.display = 'none';
-        document.getElementById('viewTableWrapper').style.display = 'block';
+    function cancelEdit() {
+        document.getElementById('editMode').classList.add('hidden');
+        document.getElementById('viewMode').classList.remove('hidden');
     }
 
-    // 5. SAVE CHANGES
-    function saveChanges() {
-        // Copy values from Inputs back to View Table
-        document.getElementById('td_id').innerText = document.getElementById('input_id').value;
-        document.getElementById('td_lname').innerText = document.getElementById('input_lname').value;
-        document.getElementById('td_fname').innerText = document.getElementById('input_fname').value;
-        document.getElementById('td_phone').innerText = document.getElementById('input_phone').value;
-        document.getElementById('td_addr').innerText = document.getElementById('input_addr').value;
-        document.getElementById('td_city').innerText = document.getElementById('input_city').value;
-        document.getElementById('td_state').innerText = document.getElementById('input_state').value;
-        document.getElementById('td_zip').innerText = document.getElementById('input_zip').value;
-        document.getElementById('td_contract').innerText = document.getElementById('input_contract').value;
+    function saveData() {
+        const formData = new FormData();
+        formData.append('action', 'update');
+        formData.append('au_id', currentData.au_id); 
+        formData.append('title_id', currentData.title_id);
 
-        cancelEditMode();
-        
-        // Show Success Popup
-        document.getElementById('successMessageText').innerText = "Entry successfully edited.";
-        document.getElementById('successModal').style.display = 'flex';
+        const ids = ['e_au_id','e_lname','e_fname','e_minit','e_phone','e_addr','e_city','e_state','e_zip','e_contract',
+                     'e_title_id','e_title','e_type','e_pub_id','e_price','e_advance','e_royalty','e_ytd','e_notes','e_pubdate'];
+        const keys = ['au_id','au_lname','au_fname','au_minit','phone','address','city','state','zip','contract',
+                      'title_id','title','type','pub_id','price','advance','royalty','ytd_sales','notes','pubdate'];
+
+        ids.forEach((id, index) => {
+            formData.append(keys[index], document.getElementById(id).value);
+        });
+
+        fetch(window.location.href, { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                document.getElementById('successMessage').innerText = "Entry successfully edited.";
+                document.getElementById('successModal').classList.remove('hidden');
+                document.getElementById('successModal').style.display = 'flex';
+            } else {
+                alert('Error: ' + data.message);
+            }
+        });
     }
 
-    // 6. DELETE LOGIC
-    function askDeleteConfirmation() {
-        document.getElementById('deleteConfirmModal').style.display = 'flex';
+    function closeSuccess() {
+        location.href = 'admin_view_authors_titles.php';
     }
 
-    function closeDeleteConfirmation() {
-        document.getElementById('deleteConfirmModal').style.display = 'none';
+    function deleteRecord() {
+        document.getElementById('deleteModal').classList.remove('hidden');
+        document.getElementById('deleteModal').style.display = 'flex';
     }
 
-    function confirmDelete() {a
-        closeDeleteConfirmation();
-        document.getElementById('successMessageText').innerText = "Entry successfully deleted.";
-        document.getElementById('successModal').style.display = 'flex';
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+        document.getElementById('deleteModal').style.display = 'none';
     }
 
-    // 7. CLOSE SUCCESS MODAL
-    function closeSuccessModal() {
-        document.getElementById('successModal').style.display = 'none';
-        if(document.getElementById('successMessageText').innerText.includes('deleted')) {
-            closeDetailCard();
-        }
+    function confirmDelete() {
+        closeDeleteModal();
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('au_id', currentData.au_id);
+
+        fetch(window.location.href, { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                document.getElementById('successMessage').innerText = "Entry successfully deleted.";
+                document.getElementById('successModal').classList.remove('hidden');
+                document.getElementById('successModal').style.display = 'flex';
+            } else {
+                alert('Error: ' + data.message);
+            }
+        });
     }
+
+    function closeNoData() {
+        document.getElementById('noDataModal').classList.add('hidden');
+        document.getElementById('noDataModal').style.display = 'none';
+    }
+
+    <?php if($show_no_data_modal): ?>
+        document.getElementById('noDataModal').classList.remove('hidden');
+        document.getElementById('noDataModal').style.display = 'flex';
+    <?php endif; ?>
 </script>
 
 </body>
