@@ -1,78 +1,18 @@
 <?php
-// ==========================================================
-// 1. DATABASE CONNECTION
-// ==========================================================
-$servername = "localhost";
-$username   = "root";        // Your Database Username
-$password   = "";            // Your Database Password
-$dbname     = "ink_and_solace";
-$port = 3307;
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname, $port);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// ==========================================================
-// 2. SEARCH LOGIC
-// ==========================================================
+// PHP Logic to handle the search
 $author_search = "";
 $title_search = "";
 $has_results = false;
-$results_list = [];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $author_search = trim($_POST['author'] ?? "");
-    $title_search = trim($_POST['title'] ?? "");
+    $author_search = htmlspecialchars($_POST['author'] ?? "");
+    $title_search = htmlspecialchars($_POST['title'] ?? "");
     
-    // Only run query if at least one field has text
+    // Simulate finding results if either field has text
     if(!empty($author_search) || !empty($title_search)){
-        
-        // ==========================================================
-        // SQL QUERY
-        // Matches if Author Name OR Book Title contains the input
-        // ==========================================================
-        // Assumed Table Name: library_inventory
-        // Assumed Columns: isbn, book_title, author_name, publisher_name, publisher_address
-        $sql = "SELECT * FROM library_inventory WHERE author_name LIKE ? OR book_title LIKE ?";
-        
-        $stmt = $conn->prepare($sql);
-        
-        if ($stmt) {
-            // Add wildcards for partial matches
-            $auth_param = "%" . $author_search . "%";
-            $title_param = "%" . $title_search . "%";
-            
-            // Logic to handle empty inputs safely
-            if(empty($author_search)) $auth_param = "NO_MATCH_XYZ";
-            if(empty($title_search)) $title_param = "NO_MATCH_XYZ";
-
-            $stmt->bind_param("ss", $auth_param, $title_param);
-            $stmt->execute();
-            $result = $stmt->get_result();
-
-            if ($result->num_rows > 0) {
-                $has_results = true;
-                
-                // Fetch data and map to array keys used in HTML
-                while($row = $result->fetch_assoc()) {
-                    $results_list[] = [
-                        'isbn'      => $row['isbn'],              // DB Column: isbn
-                        'title'     => $row['book_title'],        // DB Column: book_title
-                        'author'    => $row['author_name'],       // DB Column: author_name
-                        'publisher' => $row['publisher_name'],    // DB Column: publisher_name
-                        'address'   => $row['publisher_address']  // DB Column: publisher_address
-                    ];
-                }
-            }
-            $stmt->close();
-        }
+        $has_results = true;
     }
 }
-$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -249,7 +189,6 @@ $conn->close();
             padding: 5px 15px 5px 5px; 
         }
 
-        /* Custom Scrollbar */
         .results-scroll-container::-webkit-scrollbar { width: 8px; }
         .results-scroll-container::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
         .results-scroll-container::-webkit-scrollbar-thumb { background: #fff; border-radius: 4px; }
@@ -266,7 +205,6 @@ $conn->close();
         .res-main { font-family: 'Cinzel', serif; font-size: 20px; text-transform: uppercase; margin-bottom: 3px; }
         .res-sub { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 300; }
 
-        /* The X close button for List Modal */
         .close-btn-circle {
             margin-top: 25px; width: 45px; height: 45px; border-radius: 50%;
             background: transparent; border: 2px solid white; color: white; font-size: 22px;
@@ -278,16 +216,16 @@ $conn->close();
 
         /* ================= MODAL 2: TABLE DETAIL CARD ================= */
         .detail-card-container {
-            background-color: #918a86; 
-            width: 1000px;
-            max-width: 90vw;
-            padding: 50px 40px;
+            background-color: #918a86; /* Brownish-grey */
+            width: 1200px; /* Wider for 9 columns */
+            max-width: 95vw;
+            padding: 50px 30px;
             border-radius: 20px;
             position: relative;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
-            align-items: flex-end; 
+            align-items: center; /* Center everything inside */
         }
 
         .close-card-x {
@@ -301,47 +239,42 @@ $conn->close();
         }
         .close-card-x:hover { transform: scale(1.1); }
 
-        /* THE TABLE STYLES */
+        /* --- TABLE ALIGNMENT FIX --- */
         .info-table {
-            width: 100%;
+            /* 1. Use fit-content so it shrinks to the content size */
+            width: fit-content; 
+            max-width: 100%;
+            
+            /* 2. Auto margins center the table block horizontally */
+            margin: 0 auto 30px auto;
+
             background-color: white;
             border-collapse: collapse;
-            margin-bottom: 30px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            
+            /* Enable scroll if screen is too small */
+            display: block; 
+            overflow-x: auto;
+            white-space: nowrap;
         }
 
         .info-table th, .info-table td {
             border: 1px solid #ddd;
-            padding: 20px 15px;
+            padding: 15px 20px; /* Good padding for readability */
             text-align: center;
             font-family: 'Montserrat', sans-serif;
             color: #333;
             vertical-align: middle;
         }
 
-        .info-table th {
-            font-weight: 700;
-            font-size: 16px;
-        }
-
-        .info-table td {
-            font-weight: 400;
-            font-size: 15px;
-            line-height: 1.4;
-            min-height: 50px; 
-        }
+        .info-table th { font-weight: 700; font-size: 14px; text-transform: uppercase; }
+        .info-table td { font-weight: 400; font-size: 14px; }
 
         .btn-card-back {
-            background-color: var(--btn-blue);
-            color: white;
-            border: none;
-            padding: 12px 50px;
-            border-radius: 30px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            text-transform: uppercase;
+            background-color: var(--btn-blue); color: white; border: none;
+            padding: 12px 50px; border-radius: 30px;
+            font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 14px;
+            cursor: pointer; text-transform: uppercase;
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
         .btn-card-back:hover { transform: translateY(-2px); }
@@ -350,7 +283,6 @@ $conn->close();
         
         @media (max-width: 800px) {
             .info-table th, .info-table td { font-size: 12px; padding: 10px; }
-            .info-table { display: block; overflow-x: auto; }
         }
     </style>
 </head>
@@ -358,52 +290,69 @@ $conn->close();
 <body>
 
 <div class="top-section">
-    <img src="assets/text/logo-img.png" class="logo-top" alt="Logo">
+    <img src="assets/text/logo.png" class="logo-top" alt="Logo">
     <img src="assets/text/title-authors-titles.png" class="page-title-img" alt="Authors & Titles">
 </div>
 
 <div class="bottom-section">
-    
-    <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" class="search-form">
+    <form method="POST" class="search-form">
         <div class="input-group">
-            <label class="input-label">Author</label>
+            <label class="input-label">Author Name</label>
             <div class="input-wrapper">
                 <svg class="search-icon" viewBox="0 0 24 24"><path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zM21 21l-4.35-4.35"></path></svg>
-                <input type="text" name="author" placeholder="SEARCH" value="<?php echo htmlspecialchars($author_search); ?>">
+                <input type="text" name="author" placeholder="SEARCH" value="<?php echo $author_search; ?>">
             </div>
         </div>
-
         <div class="input-group">
-            <label class="input-label">Title</label>
+            <label class="input-label">Title / Keyword</label>
             <div class="input-wrapper">
                 <svg class="search-icon" viewBox="0 0 24 24"><path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zM21 21l-4.35-4.35"></path></svg>
-                <input type="text" name="title" placeholder="SEARCH" value="<?php echo htmlspecialchars($title_search); ?>">
+                <input type="text" name="title" placeholder="SEARCH" value="<?php echo $title_search; ?>">
             </div>
         </div>
-
         <div class="btn-container">
             <button type="submit" class="btn btn-confirm">Confirm</button>
-            <a href="menu.php" class="btn btn-return">Return to Main Menu</a>
+            <a href="admin_view_database.php" class="btn btn-return">Return to Main Menu</a>
         </div>
     </form>
-
 </div>
 
 <?php if ($has_results): ?>
+    <?php
+        // 1. Create Simulated Database Results (Using the 9-column Authors Schema)
+        $results_list = [];
+        
+        $results_list[] = [
+            'au_id'    => "172-32-1176",
+            'au_lname' => "White",
+            'au_fname' => "Johnson",
+            'phone'    => "408 496-7223",
+            'address'  => "10932 Bigge Rd.",
+            'city'     => "Menlo Park",
+            'state'    => "CA",
+            'zip'      => "94025",
+            'contract' => "1"
+        ];
+    ?>
+
     <div class="modal-overlay" id="resultModal">
         <div class="modal-header">RESULTS:</div>
         <div class="results-scroll-container">
             <?php foreach($results_list as $row): ?>
                 
                 <button class="result-pill" type="button" onclick='openTableDetail(
-                    <?php echo json_encode($row["isbn"]); ?>,
-                    <?php echo json_encode($row["title"]); ?>,
-                    <?php echo json_encode($row["author"]); ?>,
-                    <?php echo json_encode($row["publisher"]); ?>,
-                    <?php echo json_encode($row["address"]); ?>
+                    <?php echo json_encode($row["au_id"]); ?>,
+                    <?php echo json_encode($row["au_lname"]); ?>,
+                    <?php echo json_encode($row["au_fname"]); ?>,
+                    <?php echo json_encode($row["phone"]); ?>,
+                    <?php echo json_encode($row["address"]); ?>,
+                    <?php echo json_encode($row["city"]); ?>,
+                    <?php echo json_encode($row["state"]); ?>,
+                    <?php echo json_encode($row["zip"]); ?>,
+                    <?php echo json_encode($row["contract"]); ?>
                 )'>
-                    <span class="res-main"><?php echo htmlspecialchars($row['publisher']); ?></span>
-                    <span class="res-sub"><?php echo htmlspecialchars($row['title']); ?></span>
+                    <span class="res-main">New Moon Books</span>
+                    <span class="res-sub"><?php echo $row['au_fname'] . " " . $row['au_lname']; ?></span>
                 </button>
 
             <?php endforeach; ?>
@@ -420,20 +369,28 @@ $conn->close();
             <table class="info-table">
                 <thead>
                     <tr>
-                        <th>ISBN</th>
-                        <th>Title</th>
-                        <th>Author</th>
-                        <th>Publisher</th>
-                        <th>Publisher Address</th>
+                        <th>au_id</th>
+                        <th>au_lname</th>
+                        <th>au_fname</th>
+                        <th>phone</th>
+                        <th>address</th>
+                        <th>city</th>
+                        <th>state</th>
+                        <th>zip</th>
+                        <th>contract</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td id="td_isbn"></td>
-                        <td id="td_title"></td>
-                        <td id="td_author"></td>
-                        <td id="td_publisher"></td>
-                        <td id="td_address"></td>
+                        <td id="td_id"></td>
+                        <td id="td_lname"></td>
+                        <td id="td_fname"></td>
+                        <td id="td_phone"></td>
+                        <td id="td_addr"></td>
+                        <td id="td_city"></td>
+                        <td id="td_state"></td>
+                        <td id="td_zip"></td>
+                        <td id="td_contract"></td>
                     </tr>
                 </tbody>
             </table>
@@ -444,16 +401,20 @@ $conn->close();
 
     <script>
         // Function to Open the Table Modal and Fill Data
-        function openTableDetail(isbn, title, author, publisher, address) {
+        function openTableDetail(id, lname, fname, phone, addr, city, state, zip, contract) {
             // 1. Hide List
             document.getElementById('resultModal').style.display = 'none';
 
-            // 2. Fill Table Data (JavaScript handles putting info inside)
-            document.getElementById('td_isbn').innerText = isbn;
-            document.getElementById('td_title').innerText = title;
-            document.getElementById('td_author').innerText = author;
-            document.getElementById('td_publisher').innerText = publisher;
-            document.getElementById('td_address').innerText = address;
+            // 2. Fill Table Data
+            document.getElementById('td_id').innerText = id;
+            document.getElementById('td_lname').innerText = lname;
+            document.getElementById('td_fname').innerText = fname;
+            document.getElementById('td_phone').innerText = phone;
+            document.getElementById('td_addr').innerText = addr;
+            document.getElementById('td_city').innerText = city;
+            document.getElementById('td_state').innerText = state;
+            document.getElementById('td_zip').innerText = zip;
+            document.getElementById('td_contract').innerText = contract;
 
             // 3. Show Table Modal
             document.getElementById('detailModal').style.display = 'flex';
@@ -468,5 +429,4 @@ $conn->close();
 <?php endif; ?>
 
 </body>
-
 </html>
