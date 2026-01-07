@@ -1,62 +1,105 @@
 <?php
 // ==========================================================
-// DATABASE CONNECTION SETTINGS
+// DATABASE CONNECTION
 // ==========================================================
 $servername = "localhost";
-$username   = "root";      // Default XAMPP/WAMP username
-$password   = "";          // Default XAMPP/WAMP password
-$dbname     = "library_db"; // Your database name
-$port       = 3307;        // Your specific port
+$username = "root";
+$password = "";
+$dbname = "ink_and_solace"; 
+$port = 3307; 
 
-// Enable error reporting to help find issues
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$conn = new mysqli($servername, $username, $password, $dbname, $port);
 
-try {
-    $conn = new mysqli($servername, $username, $password, $dbname, $port);
-    $conn->set_charset("utf8mb4"); // Handle special characters correctly
-} catch (mysqli_sql_exception $e) {
-    die("<h3>Database Connection Failed</h3>
-         <p>Error: " . $e->getMessage() . "</p>
-         <p>Make sure your database 'library_db' exists and port 3307 is correct.</p>");
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 
 // ==========================================================
-// SEARCH LOGIC
+// 2. SEARCH & GROUPING LOGIC (With Author Merging)
 // ==========================================================
 $search_query = "";
-$search_results = [];
+$grouped_results = []; 
 $has_searched = false;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $search_query = $_POST['search_query'] ?? "";
+    $search_query = trim($_POST['search_query'] ?? "");
     $has_searched = true;
 
+    $sql = "SELECT * FROM book_reports";
+    $params = [];
+    $types = "";
+
     if (!empty($search_query)) {
-        // Search Logic
-        $sql = "SELECT publisher, author, book_count as count, books FROM reports 
-                WHERE publisher LIKE ? OR author LIKE ?";
-        
-        $stmt = $conn->prepare($sql);
-        $searchTerm = "%" . $search_query . "%";
-        $stmt->bind_param("ss", $searchTerm, $searchTerm);
-        $stmt->execute();
+        $sql .= " WHERE publisher LIKE ? OR author LIKE ?";
+        $search_term = "%" . $search_query . "%";
+        $params[] = $search_term;
+        $params[] = $search_term;
+        $types = "ss";
+    }
+
+    // Sort by publisher ASC so we process them in order
+    $sql .= " ORDER BY publisher ASC";
+
+    $stmt = $conn->prepare($sql);
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+    
+    if ($stmt->execute()) {
         $result = $stmt->get_result();
         
+        // Temporary array to hold merged data
+        // Structure: $tempData['PublisherName']['AuthorName'] = RowData
+        $tempData = [];
+
         while ($row = $result->fetch_assoc()) {
-            $search_results[] = $row;
+            // Clean up names to ensure matches (e.g., "Penguin " vs "Penguin")
+            $pubName = trim($row['publisher']);
+            $authName = trim($row['author']);
+            
+            // 1. Initialize Publisher Group if not exists
+            if (!isset($tempData[$pubName])) {
+                $tempData[$pubName] = [];
+            }
+
+            // 2. Check if Author already exists in this Publisher Group
+            // We use lowercase key for comparison to catch "Jane Austen" vs "jane austen"
+            $authKey = strtolower($authName);
+
+            if (isset($tempData[$pubName][$authKey])) {
+                // --- MERGE LOGIC ---
+                // Author exists! Combine the data.
+                
+                // Add the counts
+                $tempData[$pubName][$authKey]['count'] += intval($row['count']);
+                
+                // Combine the book lists (comma separated)
+                if (!empty($row['books'])) {
+                    $existingBooks = $tempData[$pubName][$authKey]['books'];
+                    if (!empty($existingBooks)) {
+                        // Append with a comma if list isn't empty
+                        $tempData[$pubName][$authKey]['books'] .= ", " . $row['books'];
+                    } else {
+                        $tempData[$pubName][$authKey]['books'] = $row['books'];
+                    }
+                }
+            } else {
+                // --- NEW ENTRY LOGIC ---
+                // Author does not exist yet, add them.
+                $tempData[$pubName][$authKey] = $row;
+                // Ensure count is treated as a number for future math
+                $tempData[$pubName][$authKey]['count'] = intval($row['count']);
+            }
         }
-        $stmt->close();
-    } else {
-        // Show All Logic
-        $sql = "SELECT publisher, author, book_count as count, books FROM reports";
-        $result = $conn->query($sql);
-        while ($row = $result->fetch_assoc()) {
-            $search_results[] = $row;
+
+        // 3. Convert $tempData back to the simple indexed array format the HTML expects
+        foreach ($tempData as $publisher => $authorsArray) {
+            // array_values removes the keys (author names) and makes it a simple list [0, 1, 2...]
+            $grouped_results[$publisher] = array_values($authorsArray);
         }
     }
+    $stmt->close();
 }
-
-$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -64,10 +107,8 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Report | Ink & Solace</title>
-    
+    <title>View Books | Ink & Solace</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-
     <style>
         :root {
             --light-bg: #dbdbdb; 
@@ -76,296 +117,88 @@ $conn->close();
             --btn-return: #3c4862;
             --pill-color: #918a86; 
             --pill-hover: #a39c98;
+            --modal-bg: #2e343e;
         }
-
         * { box-sizing: border-box; }
-
-        html, body {
-            margin: 0; padding: 0;
-            min-height: 100vh;
-            font-family: 'Montserrat', sans-serif;
-            background-color: var(--light-bg);
-        }
-
+        html, body { margin: 0; padding: 0; min-height: 100vh; font-family: 'Montserrat', sans-serif; background-color: var(--light-bg); }
         body { display: flex; flex-direction: column; }
 
-        /* ================= TOP SECTION ================= */
-        .top-section {
-            background-color: var(--dark-bg);
-            height: 45vh; 
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center; 
-            align-items: center;
-        }
-
-        .header-content-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 40px; 
-        }
-
+        /* TOP SECTION */
+        .top-section { background-color: var(--dark-bg); height: 45vh; min-height: 300px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .header-content-group { display: flex; flex-direction: column; align-items: center; gap: 15px; }
         .logo-top { width: 180px; height: auto; }
-        .page-title-img { width: 500px; max-width: 90%; height: auto; }
+        .page-title-text { font-family: 'Cinzel', serif; font-size: 80px; color: white; text-transform: uppercase; font-weight: 400; letter-spacing: 5px; margin: 0; line-height: 1; margin-bottom: 10px; }
+        .header-subtitle { font-family: 'Montserrat', sans-serif; color: white; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; margin: 0; font-weight: 300; opacity: 0.8; }
 
-        /* ================= BOTTOM SECTION ================= */
-        .bottom-section {
-            flex: 1;
-            padding: 50px 10% 80px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-        }
+        /* BOTTOM SECTION */
+        .bottom-section { flex: 1; padding: 50px 10% 80px; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .search-form { width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 40px; }
+        .search-container { width: 100%; max-width: 600px; position: relative; }
+        .search-input { width: 100%; padding: 15px 25px; border-radius: 50px; border: 1px solid #ccc; background-color: var(--input-bg); outline: none; font-family: 'Montserrat', sans-serif; font-size: 18px; letter-spacing: 2px; text-transform: uppercase; color: #333; }
+        .btn-search-submit { background-color: var(--btn-return); color: white; border: none; padding: 15px 30px; border-radius: 50px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: transform 0.2s, background-color 0.2s; height: 54px; }
+        .btn-search-submit:hover { transform: translateY(-2px); opacity: 0.9; }
 
-        /* SEARCH BAR STYLES */
-        .search-form {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center; 
-            gap: 15px; 
-            margin-bottom: 40px;
-        }
+        /* RESULTS LIST */
+        .results-list { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; max-width: 700px; }
+        .report-pill { background-color: var(--pill-color); color: white; width: 100%; padding: 25px 40px; border-radius: 60px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; text-align: left; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: all 0.2s ease; cursor: pointer; border: none; }
+        .report-pill:hover { transform: translateY(-3px); background-color: var(--pill-hover); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        .pill-left { display: flex; flex-direction: column; }
+        .rep-title { font-family: 'Cinzel', serif; font-size: 24px; text-transform: uppercase; margin-bottom: 5px; line-height: 1.2; font-weight: 700; }
+        .rep-details { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 400; opacity: 0.9; letter-spacing: 1px; }
+        .pill-arrow { font-size: 24px; opacity: 0.7; }
+        .no-results { font-family: 'Cinzel', serif; font-size: 20px; color: #555; margin-top: 20px; }
 
-        .search-container {
-            width: 100%;
-            max-width: 600px; 
-            position: relative;
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            opacity: 0.5;
-            color: #555;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 15px 15px 15px 55px;
-            border-radius: 50px;
-            border: 1px solid #ccc;
-            background-color: var(--input-bg);
-            outline: none;
-            font-family: 'Montserrat', sans-serif;
-            font-size: 18px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: #333;
-        }
-
-        /* SEARCH BUTTON STYLE */
-        .btn-search-submit {
-            background-color: var(--btn-return);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: transform 0.2s, background-color 0.2s;
-            height: 54px; 
-        }
-
-        .btn-search-submit:hover {
-            transform: translateY(-2px);
-            opacity: 0.9;
-        }
-
-        /* ================= RESULTS LIST STYLES ================= */
-        .results-list {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            width: 100%;
-            max-width: 700px;
-        }
-
-        .report-pill {
-            background-color: var(--pill-color);
-            color: white;
-            width: 100%;
-            padding: 20px 40px;
-            border-radius: 60px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transition: transform 0.2s, background-color 0.2s;
-            cursor: pointer;
-            border: none;
-        }
-
-        .report-pill:hover {
-            transform: scale(1.02);
-            background-color: var(--pill-hover);
-        }
-
-        .rep-title {
-            font-family: 'Cinzel', serif;
-            font-size: 22px;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-            line-height: 1.2;
-        }
-
-        .rep-details {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 16px;
-            font-weight: 300;
-            opacity: 0.9;
-        }
-
-        .no-results {
-            font-family: 'Cinzel', serif;
-            font-size: 20px;
-            color: #555;
-            margin-top: 20px;
-        }
-
-        /* ================= DETAIL MODAL STYLES ================= */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.75); 
-            backdrop-filter: blur(5px);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 2000; animation: fadeIn 0.3s ease-out;
-            display: none; /* Hidden by default */
-        }
-
-        .detail-card {
-            background-color: var(--pill-color);
-            color: white;
-            width: 700px;
-            max-width: 90vw;
-            padding: 60px 50px;
-            border-radius: 20px;
-            position: relative;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        /* Close X Button */
-        .close-card-x {
-            position: absolute; top: -20px; right: -20px;
-            width: 50px; height: 50px;
-            background-color: white; color: #333;
-            border-radius: 50%; border: none; font-size: 24px; font-weight: bold;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: 0.2s;
-        }
-        .close-card-x:hover { transform: scale(1.1); }
-
-        .dt-header {
-            font-family: 'Cinzel', serif;
-            font-size: 32px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.3);
-            padding-bottom: 10px;
-            width: 100%;
-        }
-
-        .dt-sub {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            opacity: 0.9;
-        }
-
-        /* Styling for the books list */
-        .dt-body {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-            font-weight: 300;
-            margin-bottom: 40px;
-            text-align: left;
-            width: 100%;
-            background-color: rgba(0,0,0,0.1);
-            padding: 20px;
-            border-radius: 10px;
-        }
-
-        .books-label {
-            font-weight: 700;
-            text-transform: uppercase;
-            display: block;
-            margin-bottom: 10px;
-            font-size: 14px;
-            opacity: 0.8;
-        }
-
-        .btn-card-back {
-            background-color: var(--btn-return);
-            color: white;
-            border: none;
-            padding: 12px 60px;
-            border-radius: 30px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            text-transform: uppercase;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            align-self: flex-end; 
-        }
-        .btn-card-back:hover { transform: translateY(-2px); }
-
-        /* ================= RETURN BUTTON (Footer) ================= */
-        .return-footer {
-            margin-top: 50px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .btn-return-wrap {
-            background-color: var(--btn-return);
-            padding: 12px 30px;
-            border-radius: 50px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transition: transform 0.2s ease;
-        }
+        /* MODALS */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s ease-out; display: none; }
         
-        .btn-return-wrap:hover {
-            transform: translateY(-2px);
+        .detail-card { background-color: var(--modal-bg); color: white; width: 800px; max-width: 90vw; padding: 50px; border-radius: 15px; position: relative; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; max-height: 90vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
+        
+        .close-card-x { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; background-color: transparent; color: white; border-radius: 50%; border: 2px solid white; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .close-card-x:hover { background-color: white; color: var(--modal-bg); transform: rotate(90deg); }
+        
+        .dt-header { font-family: 'Cinzel', serif; font-size: 36px; text-transform: uppercase; margin-bottom: 10px; width: 100%; letter-spacing: 2px; }
+        .dt-subheader { font-family: 'Montserrat', sans-serif; font-size: 14px; opacity: 0.6; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.2); width: 100%; padding-bottom: 15px; }
+
+        /* LIST STYLES */
+        .entries-container { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; text-align: left; }
+        
+        .entry-item-read { 
+            background-color: rgba(255,255,255,0.05); 
+            padding: 20px; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: flex-start;
+            border-bottom: 2px solid rgba(255,255,255,0.05);
         }
 
+        .entry-number {
+            font-family: 'Cinzel', serif; font-size: 24px; font-weight: 700; margin-right: 20px; color: var(--pill-color); min-width: 30px;
+        }
+
+        .entry-text-group { display: flex; flex-direction: column; width: 100%; }
+        
+        .entry-author-name { 
+            font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 18px; color: #fff; margin-bottom: 10px; text-transform: uppercase;
+        }
+
+        /* --- BULLET STYLES --- */
+        .book-ul { margin: 0; padding-left: 20px; list-style-type: disc; color: #e0e0e0; }
+        .book-li { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 300; margin-bottom: 5px; line-height: 1.4; opacity: 0.9; }
+
+        /* CLOSE BUTTON IN MODAL */
+        .btn-card-close {
+            background-color: var(--btn-return); color: white; border: none; padding: 12px 50px; border-radius: 50px; 
+            font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; text-transform: uppercase; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin-top: 20px; transition: transform 0.2s;
+        }
+        .btn-card-close:hover { transform: translateY(-2px); }
+
+        .return-footer { margin-top: 50px; display: flex; justify-content: center; }
+        .btn-return-wrap { background-color: var(--btn-return); padding: 12px 30px; border-radius: 50px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s ease; }
+        .btn-return-wrap:hover { transform: translateY(-2px); }
         .btn-return-img { width: 160px; height: auto; }
-
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        @media (max-width: 768px) {
-            .page-title-img { width: 350px; }
-            .logo-top { width: 130px; }
-            .search-form { flex-direction: column; gap: 10px; }
-            .search-container { width: 100%; }
-            .btn-search-submit { width: 100%; }
-        }
+        @media (max-width: 768px) { .page-title-text { font-size: 50px; } .logo-top { width: 130px; } .search-form { flex-direction: column; gap: 10px; } .search-container { width: 100%; } .btn-search-submit { width: 100%; } }
     </style>
 </head>
 
@@ -374,36 +207,33 @@ $conn->close();
     <div class="top-section">
         <div class="header-content-group">
             <img src="assets/text/logo.png" class="logo-top" alt="Logo">
-            <img src="assets/text/title-report.png" class="page-title-img" alt="REPORT">
+            <h1 class="page-title-text">REPORT</h1>
+            <p class="header-subtitle">add correct information to avoid data mismatch.</p>
         </div>
     </div>
 
     <div class="bottom-section">
-        
         <form method="POST" class="search-form">
             <div class="search-container">
-                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <input type="text" name="search_query" class="search-input" placeholder="SEARCH PUBLISHER" value="<?php echo htmlspecialchars($search_query); ?>">
+                <input type="text" name="search_query" class="search-input" placeholder="SEARCH ENTRIES" value="<?php echo htmlspecialchars($search_query); ?>">
             </div>
             <button type="submit" class="btn-search-submit">SEARCH</button>
         </form>
 
         <?php if ($has_searched): ?>
             <div class="results-list">
-                <?php if (count($search_results) > 0): ?>
-                    <?php foreach($search_results as $row): ?>
+                <?php if (count($grouped_results) > 0): ?>
+                    <?php foreach($grouped_results as $publisherName => $entries): ?>
                         
-                        <button type="button" class="report-pill" onclick='openReportDetail(
-                            <?php echo htmlspecialchars(json_encode($row["publisher"]), ENT_QUOTES, 'UTF-8'); ?>,
-                            <?php echo htmlspecialchars(json_encode($row["author"]), ENT_QUOTES, 'UTF-8'); ?>,
-                            <?php echo htmlspecialchars(json_encode($row["count"]), ENT_QUOTES, 'UTF-8'); ?>,
-                            <?php echo htmlspecialchars(json_encode($row["books"]), ENT_QUOTES, 'UTF-8'); ?>
+                        <button class="report-pill" onclick='openGroupModal(
+                            <?php echo json_encode($publisherName); ?>,
+                            "<?php echo base64_encode(json_encode($entries)); ?>"
                         )'>
-                            <span class="rep-title"><?php echo htmlspecialchars($row['publisher']); ?></span>
-                            <span class="rep-details"><?php echo htmlspecialchars($row['author']); ?></span>
+                            <div class="pill-left">
+                                <span class="rep-title"><?php echo htmlspecialchars($publisherName); ?></span>
+                                <span class="rep-details"><?php echo count($entries); ?> REGISTERED AUTHORS</span>
+                            </div>
+                            <div class="pill-arrow">➜</div>
                         </button>
 
                     <?php endforeach; ?>
@@ -414,45 +244,84 @@ $conn->close();
         <?php endif; ?>
 
         <div class="return-footer">
-            <a href="menu.php" style="text-decoration:none;">
+            <a href="admin_view_database.php" style="text-decoration:none;">
                 <div class="btn-return-wrap">
                     <img src="assets/text/btn-return.png" class="btn-return-img" alt="Return to Main Menu">
                 </div>
             </a>
         </div>
-
     </div>
 
     <div class="modal-overlay" id="detailModal">
         <div class="detail-card">
-            <button class="close-card-x" onclick="closeReportDetail()">X</button>
+            <button class="close-card-x" onclick="closeReportDetail()">✕</button>
             
-            <div class="dt-header" id="dt-publisher">Publisher Name</div>
-            
-            <div class="dt-sub" id="dt-author-count">Author Name | 0 Books</div>
-            
-            <div class="dt-body">
-                <span class="books-label">List of Books:</span>
-                <span id="dt-books">List content...</span>
+            <div class="dt-header" id="modal-pub-title">Publisher Name</div>
+            <div class="dt-subheader" id="modal-pub-stats">Total Books: 0</div>
+
+            <div id="list-view-area" style="width: 100%;">
+                <div class="entries-container" id="entries-list">
+                    </div>
             </div>
 
-            <button class="btn-card-back" onclick="closeReportDetail()">Back</button>
+            <button class="btn-card-close" onclick="closeReportDetail()">CLOSE</button>
         </div>
     </div>
 
     <script>
-        function openReportDetail(publisher, author, count, books) {
-            // Update modal content with specific fields
-            document.getElementById('dt-publisher').innerText = publisher;
-            document.getElementById('dt-author-count').innerText = author + " | " + count;
-            document.getElementById('dt-books').innerText = books;
+        // 1. OPEN MODAL (Handles Base64 Decoding)
+        function openGroupModal(publisherName, encodedEntries) {
+            
+            // Decodes the safe Base64 string back into a JS Array
+            const entriesArray = JSON.parse(atob(encodedEntries));
 
-            // Show the modal
+            // A. Set Header
+            document.getElementById('modal-pub-title').innerText = publisherName;
+
+            // B. Calculate Stats
+            let totalBooks = 0;
+            entriesArray.forEach(entry => {
+                totalBooks += parseInt(entry.count || 0);
+            });
+            document.getElementById('modal-pub-stats').innerText = "Total Number of Books under this Publisher: " + totalBooks;
+
+            // C. Generate List
+            const listContainer = document.getElementById('entries-list');
+            listContainer.innerHTML = '';
+
+            entriesArray.forEach((entry, index) => {
+                const div = document.createElement('div');
+                div.className = 'entry-item-read'; 
+                
+                // Bullet Logic
+                let bookString = entry.books || "";
+                // Split by comma or newline
+                let bookItems = bookString.split(/[,\n]+/);
+                
+                let bulletsHTML = '<ul class="book-ul">';
+                bookItems.forEach(book => {
+                    let cleanBook = book.trim();
+                    if(cleanBook !== "") {
+                        bulletsHTML += `<li class="book-li">${cleanBook}</li>`;
+                    }
+                });
+                bulletsHTML += '</ul>';
+
+                div.innerHTML = `
+                    <div class="entry-number">${index + 1}.</div>
+                    <div class="entry-text-group">
+                        <div class="entry-author-name">${entry.author}</div>
+                        <div class="entry-book-list">${bulletsHTML}</div>
+                    </div>
+                `;
+                
+                listContainer.appendChild(div);
+            });
+            
             document.getElementById('detailModal').style.display = 'flex';
         }
 
         function closeReportDetail() {
-            // Hide the modal    
             document.getElementById('detailModal').style.display = 'none';
         }
     </script>
