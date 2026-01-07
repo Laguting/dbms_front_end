@@ -23,6 +23,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // --- STEP 2: ADD TITLE ---
     if (isset($_POST['action']) && $_POST['action'] == 'add_title') {
+        // Generates ID based on first 2 letters of the selected Type
         $gen_title_id = strtoupper(substr($_POST['type'], 0, 2)) . rand(1000, 9999);
 
         $stmt = $conn->prepare("INSERT INTO titles (title_id, title, type, pub_id, price, advance, royalty, ytd_sales, notes, pubdate, au_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -70,12 +71,11 @@ if(isset($_GET['ajax_add_author'])) {
 
     // --- INSERT NEW AUTHOR ---
     $gen_id = sprintf('%03d-%02d-%04d', rand(0,999), rand(0,99), rand(0,9999));
-    $stmt = $conn->prepare("INSERT INTO authors (au_id, au_lname, au_fname, au_minit, phone, address, city, state, zip, contract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
-    $au_minit = $data['au_minit'] ?? ""; 
+    $stmt = $conn->prepare("INSERT INTO authors (au_id, au_lname, au_fname, phone, address, city, state, zip, contract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
-    $stmt->bind_param("sssssssssi", 
-        $gen_id, $data['au_lname'], $data['au_fname'], $au_minit, $data['phone'], 
+    $stmt->bind_param("ssssssssi", 
+        $gen_id, $data['au_lname'], $data['au_fname'], $data['phone'], 
         $data['address'], $data['city'], $data['state'], $data['zip'], $data['contract']
     );
 
@@ -168,18 +168,32 @@ if(isset($_GET['ajax_add_author'])) {
 
         /* GRID FORM */
         .form-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; 
+            text-align: left;
         }
         .full-width { grid-column: 1 / -1; }
 
         .input-group { display: flex; flex-direction: column; }
         .text-label {
-            font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; color: #444;
-            margin-bottom: 5px; margin-left: 10px; text-transform: uppercase;
+            font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700; color: #444;
+            margin-bottom: 3px; 
+            margin-left: 10px; text-transform: uppercase;
         }
         .table-input {
-            width: 100%; padding: 12px 20px; border-radius: 50px; border: 1px solid #ccc;
+            width: 100%; 
+            padding: 8px 15px; 
+            border-radius: 50px; border: 1px solid #ccc;
             background-color: var(--input-bg); font-family: 'Montserrat', sans-serif; font-size: 14px;
+        }
+
+        /* Dropdown specific styling adjustments */
+        select.table-input {
+            appearance: none; 
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+            cursor: pointer;
         }
 
         .submit-btn-container {
@@ -242,14 +256,10 @@ if(isset($_GET['ajax_add_author'])) {
                 </div>
                 
                 <div class="input-group">
-                    <label class="text-label">M.I. (Optional)</label>
-                    <input type="text" id="au_minit" name="au_minit" class="table-input" maxlength="1">
-                </div>
-                
-                <div class="input-group">
                     <label class="text-label">Phone</label>
                     <input type="text" id="phone" name="phone" class="table-input" required>
                 </div>
+                
                 <div class="input-group full-width">
                     <label class="text-label">Address</label>
                     <input type="text" id="address" name="address" class="table-input" required>
@@ -298,9 +308,57 @@ if(isset($_GET['ajax_add_author'])) {
                 
                 <div class="input-group">
                     <label class="text-label">Type</label>
-                    <input type="text" name="type" class="table-input" placeholder="e.g. business" required>
-                </div>
+                    <select name="type" class="table-input" required>
+                        <option value="" disabled selected>Select a Category...</option>
+                        
+                        <optgroup label="1. General Non-Fiction">
+                            <option value="Arts & Recreation">Arts & Recreation</option>
+                            <option value="Biographies & Memoirs">Biographies & Memoirs</option>
+                            <option value="Business & Economics">Business & Economics</option>
+                            <option value="History & Geography">History & Geography</option>
+                            <option value="Philosophy & Psychology">Philosophy & Psychology</option>
+                            <option value="Religion & Spirituality">Religion & Spirituality</option>
+                            <option value="Science & Nature">Science & Nature</option>
+                            <option value="Social Sciences">Social Sciences</option>
+                            <option value="Technology & Applied Science">Technology & Applied Science</option>
+                            <option value="True Crime">True Crime</option>
+                        </optgroup>
 
+                        <optgroup label="2. Fiction">
+                            <option value="Action & Adventure">Action & Adventure</option>
+                            <option value="Classics">Classics</option>
+                            <option value="Contemporary Fiction">Contemporary Fiction</option>
+                            <option value="Fantasy">Fantasy</option>
+                            <option value="Historical Fiction">Historical Fiction</option>
+                            <option value="Horror">Horror</option>
+                            <option value="Literary Fiction">Literary Fiction</option>
+                            <option value="Mystery & Thriller">Mystery & Thriller</option>
+                            <option value="Romance">Romance</option>
+                            <option value="Science Fiction">Science Fiction</option>
+                        </optgroup>
+
+                        <optgroup label="3. Visual & Alternative Formats">
+                            <option value="Graphic Novels">Graphic Novels</option>
+                            <option value="Manga">Manga</option>
+                            <option value="Comic Books">Comic Books</option>
+                            <option value="Large Print">Large Print</option>
+                            <option value="Audiobooks">Audiobooks</option>
+                        </optgroup>
+
+                        <optgroup label="4. Specialized Collections">
+                            <option value="Reference">Reference</option>
+                            <option value="Periodicals">Periodicals</option>
+                            <option value="Government Documents">Government Documents</option>
+                            <option value="Special Collections/Archives">Special Collections/Archives</option>
+                        </optgroup>
+
+                        <optgroup label="5. Age-Specific Categories">
+                            <option value="Children’s">Children’s (Board, Picture, Easy Readers)</option>
+                            <option value="Young Adult">Young Adult (YA)</option>
+                            <option value="Adult">Adult</option>
+                        </optgroup>
+                    </select>
+                </div>
                 <div class="input-group">
                     <label class="text-label">Price</label>
                     <input type="text" name="price" class="table-input">
@@ -354,7 +412,6 @@ if(isset($_GET['ajax_add_author'])) {
         const data = {
             au_fname: document.getElementById('au_fname').value,
             au_lname: document.getElementById('au_lname').value,
-            au_minit: document.getElementById('au_minit').value,
             phone: document.getElementById('phone').value,
             address: document.getElementById('address').value,
             city: document.getElementById('city').value,
