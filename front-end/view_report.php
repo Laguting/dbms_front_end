@@ -1,68 +1,61 @@
 <?php
 // ==========================================================
-// 1. DATABASE CONNECTION
+// DATABASE CONNECTION SETTINGS
 // ==========================================================
 $servername = "localhost";
-$username   = "root";        // Your Database Username
-$password   = "";            // Your Database Password
-$dbname     = "ink_and_solace";
-$port = 3307;
+$username   = "root";      // Default XAMPP/WAMP username
+$password   = "";          // Default XAMPP/WAMP password
+$dbname     = "library_db"; // Your database name
+$port       = 3307;        // Your specific port
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname, $port);
+// Enable error reporting to help find issues
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try {
+    $conn = new mysqli($servername, $username, $password, $dbname, $port);
+    $conn->set_charset("utf8mb4"); // Handle special characters correctly
+} catch (mysqli_sql_exception $e) {
+    die("<h3>Database Connection Failed</h3>
+         <p>Error: " . $e->getMessage() . "</p>
+         <p>Make sure your database 'library_db' exists and port 3307 is correct.</p>");
 }
 
 // ==========================================================
-// 2. SEARCH LOGIC
+// SEARCH LOGIC
 // ==========================================================
 $search_query = "";
 $search_results = [];
 $has_searched = false;
 
-// Determine if we should show results (Show all by default or only on search?)
-// Based on previous code, we show results if POST happens.
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $search_query = trim($_POST['search_query'] ?? "");
+    $search_query = $_POST['search_query'] ?? "";
     $has_searched = true;
 
-    // ==========================================================
-    // SQL QUERY
-    // ==========================================================
-    
-    if (empty($search_query)) {
-        // If search is empty, select ALL records (as per your previous logic)
-        $sql = "SELECT * FROM library_reports";
-        $stmt = $conn->prepare($sql);
-    } else {
-        // If search has text, filter by Publisher OR Author
-        $sql = "SELECT * FROM library_reports WHERE publisher_name LIKE ? OR author_name LIKE ?";
-        $stmt = $conn->prepare($sql);
+    if (!empty($search_query)) {
+        // Search Logic
+        $sql = "SELECT publisher, author, book_count as count, books FROM reports 
+                WHERE publisher LIKE ? OR author LIKE ?";
         
-        if ($stmt) {
-            $param = "%" . $search_query . "%";
-            $stmt->bind_param("ss", $param, $param);
-        }
-    }
-
-    // Execute and Fetch
-    if (isset($stmt) && $stmt->execute()) {
+        $stmt = $conn->prepare($sql);
+        $searchTerm = "%" . $search_query . "%";
+        $stmt->bind_param("ss", $searchTerm, $searchTerm);
+        $stmt->execute();
         $result = $stmt->get_result();
         
         while ($row = $result->fetch_assoc()) {
-            $search_results[] = [
-                'publisher' => $row['publisher_name'],
-                'author'    => $row['author_name'],
-                'count'     => $row['book_count'], // e.g. "12 Books"
-                'books'     => $row['book_list']   // Long text of books
-            ];
+            $search_results[] = $row;
         }
         $stmt->close();
+    } else {
+        // Show All Logic
+        $sql = "SELECT publisher, author, book_count as count, books FROM reports";
+        $result = $conn->query($sql);
+        while ($row = $result->fetch_assoc()) {
+            $search_results[] = $row;
+        }
     }
 }
+
 $conn->close();
 ?>
 
@@ -387,13 +380,13 @@ $conn->close();
 
     <div class="bottom-section">
         
-        <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" class="search-form">
+        <form method="POST" class="search-form">
             <div class="search-container">
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" name="search_query" class="search-input" placeholder="SEARCH ENTRIES" value="<?php echo htmlspecialchars($search_query); ?>">
+                <input type="text" name="search_query" class="search-input" placeholder="SEARCH PUBLISHER" value="<?php echo htmlspecialchars($search_query); ?>">
             </div>
             <button type="submit" class="btn-search-submit">SEARCH</button>
         </form>
@@ -403,11 +396,11 @@ $conn->close();
                 <?php if (count($search_results) > 0): ?>
                     <?php foreach($search_results as $row): ?>
                         
-                        <button class="report-pill" onclick='openReportDetail(
-                            <?php echo json_encode($row["publisher"]); ?>,
-                            <?php echo json_encode($row["author"]); ?>,
-                            <?php echo json_encode($row["count"]); ?>,
-                            <?php echo json_encode($row["books"]); ?>
+                        <button type="button" class="report-pill" onclick='openReportDetail(
+                            <?php echo htmlspecialchars(json_encode($row["publisher"]), ENT_QUOTES, 'UTF-8'); ?>,
+                            <?php echo htmlspecialchars(json_encode($row["author"]), ENT_QUOTES, 'UTF-8'); ?>,
+                            <?php echo htmlspecialchars(json_encode($row["count"]), ENT_QUOTES, 'UTF-8'); ?>,
+                            <?php echo htmlspecialchars(json_encode($row["books"]), ENT_QUOTES, 'UTF-8'); ?>
                         )'>
                             <span class="rep-title"><?php echo htmlspecialchars($row['publisher']); ?></span>
                             <span class="rep-details"><?php echo htmlspecialchars($row['author']); ?></span>
@@ -459,7 +452,7 @@ $conn->close();
         }
 
         function closeReportDetail() {
-            // Hide the modal   
+            // Hide the modal    
             document.getElementById('detailModal').style.display = 'none';
         }
     </script>
