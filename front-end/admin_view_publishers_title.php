@@ -130,7 +130,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             display: block; 
             letter-spacing: 1px;
             text-transform: uppercase;
-            font-weight: 400; /* Regular */
+            font-weight: 400; 
         }
 
         .input-field { 
@@ -141,7 +141,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background-color: white; 
             font-size: 16px; 
             font-family: 'Montserrat', sans-serif;
-            font-weight: 300; /* Thin */
+            font-weight: 300; 
             color: #333;
             margin-bottom: 15px; 
             outline: none; 
@@ -155,15 +155,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .input-field:focus { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         ::placeholder { color: #9aa0a6; opacity: 1; font-weight: 300; }
 
-        /* --- PRIMARY BUTTONS: BOLD (700) --- */
-        /* This covers Search, Return, Edit, Delete, Save, Cancel */
+        /* --- PRIMARY BUTTONS --- */
         .btn { 
             padding: 15px; 
             width: 310px; 
             border-radius: 50px; 
             border: none; 
             color: white; 
-            font-weight: 700; /* BOLD */
+            font-weight: 700; 
             cursor: pointer; 
             font-family: 'Montserrat'; 
             margin-bottom: 15px; 
@@ -176,7 +175,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             backdrop-filter: blur(8px); background: rgba(0,0,0,0.5); 
             z-index: 1000; 
         }
-        #statusModal, #deleteModal { z-index: 2000 !important; }
+        #statusModal, #deleteModal, #editModal { z-index: 2000 !important; }
 
         .results-container { display: flex; flex-direction: column; align-items: center; width: 550px; }
         .results-list { max-height: 450px; overflow-y: auto; padding: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; }
@@ -194,30 +193,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); 
         }
         .result-btn:hover { transform: scale(1.02); background-color: #a39c98; }
-        /* Result list text stays regular */
         .result-btn div { font-weight: 400; }
 
         .status-card { background: #1e2229; padding: 50px 30px; border-radius: 15px; text-align: center; color: white; position: relative; width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
-        /* --- POPUP TEXT: UNBOLDED --- */
         .status-card h2 { 
             font-family: 'Cinzel'; 
             font-size: 24px; 
             margin-bottom: 30px; 
             line-height: 1.4; 
             text-transform: uppercase; 
-            font-weight: 400; /* Regular */
+            font-weight: 400; 
         }
         
-        /* --- POPUP BUTTONS: BOLD (700) --- */
-        /* Covers OK, DONE */
         .done-btn { 
             background: #eeeeee; 
             color: black; 
             border: none; 
             padding: 12px 60px; 
             border-radius: 30px; 
-            font-weight: 700; /* BOLD */
+            font-weight: 700; 
             cursor: pointer; 
             font-family: 'Montserrat'; 
             text-transform: uppercase; 
@@ -226,7 +221,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .confirm-btn-group { display: flex; justify-content: center; gap: 20px; }
         
-        /* Covers YES */
         .confirm-yes { 
             background: var(--btn-grey); 
             color: white; 
@@ -236,10 +230,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-family:'Montserrat'; 
             cursor: pointer; 
             text-transform: uppercase; 
-            font-weight: 700; /* BOLD */
+            font-weight: 700; 
         }
         
-        /* Covers CANCEL (Popup) */
         .confirm-cancel { 
             background: var(--btn-red); 
             color: white; 
@@ -249,12 +242,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-family:'Montserrat'; 
             cursor: pointer; 
             text-transform: uppercase; 
-            font-weight: 700; /* BOLD */
+            font-weight: 700; 
         }
 
         .detail-card { background: var(--modal-bg); width: 1350px; max-width: 95vw; padding: 40px; border-radius: 20px; color: white; position: relative; }
         
-        /* Section Titles and Table Headers: UNBOLDED */
         .section-title { font-family: 'Cinzel'; font-size: 18px; margin: 25px 0 10px; text-transform: uppercase; font-weight: 400; }
         
         .table-wrap { background: white; border-radius: 5px; overflow: hidden; margin-bottom: 25px; overflow-x: auto; }
@@ -269,6 +261,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .grid-input.edit-active { background-color: #ffffff; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
+        /* Dropdown specific */
+        select.grid-input { text-align: left; height: 32px; }
+
         .close-circle { width: 35px; height: 35px; border: 2px solid white; border-radius: 50%; color: white; background: transparent; cursor: pointer; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: 0.2s; }
         .close-circle:hover { background: rgba(255,255,255,0.2); }
         .close-corner { position: absolute; top: 15px; right: 15px; }
@@ -337,10 +332,149 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 </div>
 
+<div class="modal-overlay" id="detailModal">
+    <div class="detail-card">
+        <div class="close-corner">
+            <button class="close-circle" onclick="goBackToResults()">✕</button>
+        </div>
+        
+        <div class="section-title">PUBLISHER INFORMATION</div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>PUB_ID</th><th>Publisher Name</th><th>City</th><th>State</th><th>Country</th></tr></thead>
+                <tbody><tr>
+                    <td><input id="p_id" class="grid-input" readonly style="background:#f0f0f0;"></td>
+                    <td><input id="p_name" class="grid-input" readonly></td>
+                    <td><input id="p_city" class="grid-input" readonly></td>
+                    <td><input id="p_state" class="grid-input" readonly></td>
+                    <td><input id="p_country" class="grid-input" readonly></td>
+                </tr></tbody>
+            </table>
+        </div>
+
+        <div class="section-title">TITLE INFORMATION</div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Title ID</th><th>Title</th><th>Type</th><th>Price</th><th>Advance</th><th>Royalty</th><th>YTD Sales</th><th>Pub Date</th></tr></thead>
+                <tbody><tr>
+                    <td><input id="t_id" class="grid-input" readonly style="background:#f0f0f0;"></td>
+                    <td><input id="t_title" class="grid-input" readonly></td>
+                    <td><input id="t_type" class="grid-input" readonly></td>
+                    <td><input id="t_price" class="grid-input" readonly></td>
+                    <td><input id="t_advance" class="grid-input" readonly></td>
+                    <td><input id="t_royalty" class="grid-input" readonly></td>
+                    <td><input id="t_ytd" class="grid-input" readonly></td>
+                    <td><input id="t_date" class="grid-input" readonly></td>
+                </tr></tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:20px; margin-top:30px;">
+            <button class="btn" style="background:#8b8682; width:180px;" onclick="openEditModal()">EDIT</button>
+            <button class="btn" style="background:#800000; width:180px;" onclick="deleteRecord()">DELETE</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+    <div class="detail-card">
+        <div class="close-corner">
+            <button class="close-circle" onclick="closeEditModal()">✕</button>
+        </div>
+        
+        <div class="section-title">PUBLISHER INFORMATION</div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>PUB_ID</th><th>Publisher Name</th><th>City</th><th>State</th><th>Country</th></tr></thead>
+                <tbody><tr>
+                    <td><input id="edit_p_id" class="grid-input" readonly style="background:#f0f0f0;"></td>
+                    <td><input id="edit_p_name" class="grid-input edit-active"></td>
+                    <td><input id="edit_p_city" class="grid-input edit-active"></td>
+                    <td><input id="edit_p_state" class="grid-input edit-active"></td>
+                    <td><input id="edit_p_country" class="grid-input edit-active"></td>
+                </tr></tbody>
+            </table>
+        </div>
+
+        <div class="section-title">TITLE INFORMATION</div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Title ID</th><th>Title</th><th>Type</th><th>Price</th><th>Advance</th><th>Royalty</th><th>YTD Sales</th><th>Pub Date</th></tr></thead>
+                <tbody><tr>
+                    <td><input id="edit_t_id" class="grid-input" readonly style="background:#f0f0f0;"></td>
+                    <td><input id="edit_t_title" class="grid-input edit-active"></td>
+                    
+                    <td>
+                        <select id="edit_t_type" class="grid-input edit-active">
+                            <option value="" disabled selected>Select Type</option>
+                            <optgroup label="1. General Non-Fiction">
+                                <option value="Arts & Recreation">Arts & Recreation</option>
+                                <option value="Biographies & Memoirs">Biographies & Memoirs</option>
+                                <option value="Business & Economics">Business & Economics</option>
+                                <option value="History & Geography">History & Geography</option>
+                                <option value="Philosophy & Psychology">Philosophy & Psychology</option>
+                                <option value="Religion & Spirituality">Religion & Spirituality</option>
+                                <option value="Science & Nature">Science & Nature</option>
+                                <option value="Social Sciences">Social Sciences</option>
+                                <option value="Technology & Applied Science">Technology & Applied Science</option>
+                                <option value="True Crime">True Crime</option>
+                            </optgroup>
+                            <optgroup label="2. Fiction">
+                                <option value="Action & Adventure">Action & Adventure</option>
+                                <option value="Classics">Classics</option>
+                                <option value="Contemporary Fiction">Contemporary Fiction</option>
+                                <option value="Fantasy">Fantasy</option>
+                                <option value="Historical Fiction">Historical Fiction</option>
+                                <option value="Horror">Horror</option>
+                                <option value="Literary Fiction">Literary Fiction</option>
+                                <option value="Mystery & Thriller">Mystery & Thriller</option>
+                                <option value="Romance">Romance</option>
+                                <option value="Science Fiction">Science Fiction</option>
+                            </optgroup>
+                            <optgroup label="3. Visual & Alternative Formats">
+                                <option value="Graphic Novels">Graphic Novels</option>
+                                <option value="Manga">Manga</option>
+                                <option value="Comic Books">Comic Books</option>
+                                <option value="Large Print">Large Print</option>
+                                <option value="Audiobooks">Audiobooks</option>
+                            </optgroup>
+                            <optgroup label="4. Specialized Collections">
+                                <option value="Reference">Reference</option>
+                                <option value="Periodicals">Periodicals</option>
+                                <option value="Government Documents">Government Documents</option>
+                                <option value="Special Collections/Archives">Special Collections/Archives</option>
+                            </optgroup>
+                            <optgroup label="5. Age-Specific Categories">
+                                <option value="Children’s">Children’s</option>
+                                <option value="Young Adult (YA)">Young Adult (YA)</option>
+                                <option value="Adult">Adult</option>
+                            </optgroup>
+                        </select>
+                    </td>
+
+                    <td><input id="edit_t_price" class="grid-input edit-active"></td>
+                    <td><input id="edit_t_advance" class="grid-input edit-active"></td>
+                    <td><input id="edit_t_royalty" class="grid-input edit-active"></td>
+                    <td><input id="edit_t_ytd" class="grid-input edit-active"></td>
+                    <td><input id="edit_t_date" class="grid-input edit-active"></td>
+                </tr></tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:20px; margin-top:30px;">
+            <button class="btn" style="background:#8b8682; width:180px;" onclick="saveChanges()">SAVE</button>
+            <button class="btn" style="background:#800000; width:180px;" onclick="closeEditModal()">CANCEL</button>
+        </div>
+    </div>
+</div>
+
 <script>
+    // --- STATUS/MESSAGE MODAL ---
     function showStatus(message, btnText = 'DONE') {
         document.getElementById('detailModal').style.display = 'none';
+        document.getElementById('editModal').style.display = 'none';
         document.getElementById('deleteModal').style.display = 'none';
+        
         if (document.getElementById('resultsModal')) {
              document.getElementById('resultsModal').style.display = 'none';
         }
@@ -349,10 +483,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         document.getElementById('statusModal').style.display = 'flex';
     }
 
+    // --- VIEW DETAILS (READ ONLY) ---
     function showDetails(data) {
         document.getElementById('resultsModal').style.display = 'none';
         document.getElementById('detailModal').style.display = 'flex';
         
+        // Populate the READ ONLY modal
         document.getElementById('p_id').value = data.pub_id || '';
         document.getElementById('p_name').value = data.pub_name || '';
         document.getElementById('p_city').value = data.city || '';
@@ -360,7 +496,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         document.getElementById('p_country').value = data.country || '';
         document.getElementById('t_id').value = data.title_id || '';
         document.getElementById('t_title').value = data.title || '';
-        document.getElementById('t_type').value = data.type || '';
+        document.getElementById('t_type').value = data.type || ''; 
         document.getElementById('t_price').value = data.price || '0.00';
         document.getElementById('t_advance').value = data.advance || '0.00';
         document.getElementById('t_royalty').value = data.royalty || '0';
@@ -375,32 +511,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    function enableEdit() {
-        document.querySelectorAll('.mode-toggle').forEach(el => { 
-            el.readOnly = false; 
-            el.classList.add('edit-active'); 
-        });
-        document.getElementById('viewBtns').classList.add('hidden');
-        document.getElementById('editBtns').classList.remove('hidden');
+    // --- OPEN EDIT MODAL (POPULATE & SWITCH) ---
+    function openEditModal() {
+        // Transfer data from View Modal inputs to Edit Modal inputs
+        document.getElementById('edit_p_id').value = document.getElementById('p_id').value;
+        document.getElementById('edit_p_name').value = document.getElementById('p_name').value;
+        document.getElementById('edit_p_city').value = document.getElementById('p_city').value;
+        document.getElementById('edit_p_state').value = document.getElementById('p_state').value;
+        document.getElementById('edit_p_country').value = document.getElementById('p_country').value;
+
+        document.getElementById('edit_t_id').value = document.getElementById('t_id').value;
+        document.getElementById('edit_t_title').value = document.getElementById('t_title').value;
+        
+        // Handle dropdown select
+        document.getElementById('edit_t_type').value = document.getElementById('t_type').value;
+
+        document.getElementById('edit_t_price').value = document.getElementById('t_price').value;
+        document.getElementById('edit_t_advance').value = document.getElementById('t_advance').value;
+        document.getElementById('edit_t_royalty').value = document.getElementById('t_royalty').value;
+        document.getElementById('edit_t_ytd').value = document.getElementById('t_ytd').value;
+        document.getElementById('edit_t_date').value = document.getElementById('t_date').value;
+
+        // Hide View, Show Edit
+        document.getElementById('detailModal').style.display = 'none';
+        document.getElementById('editModal').style.display = 'flex';
     }
 
+    // --- CLOSE EDIT MODAL ---
+    function closeEditModal() {
+        // Hide Edit, Show View again (without saving)
+        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    // --- SAVE CHANGES ---
     function saveChanges() {
         const formData = new FormData();
         formData.append('action', 'update');
-        formData.append('pub_id', document.getElementById('p_id').value);
-        formData.append('pub_name', document.getElementById('p_name').value);
-        formData.append('city', document.getElementById('p_city').value);
-        formData.append('state', document.getElementById('p_state').value);
-        formData.append('country', document.getElementById('p_country').value);
-        formData.append('title_id', document.getElementById('t_id').value);
-        formData.append('title', document.getElementById('t_title').value);
-        formData.append('type', document.getElementById('t_type').value);
-        formData.append('price', document.getElementById('t_price').value);
-        formData.append('advance', document.getElementById('t_advance').value);
-        formData.append('royalty', document.getElementById('t_royalty').value);
-        formData.append('ytd_sales', document.getElementById('t_ytd').value);
+        // IMPORTANT: Pull values from the EDIT modal inputs (ids start with edit_)
+        formData.append('pub_id', document.getElementById('edit_p_id').value);
+        formData.append('pub_name', document.getElementById('edit_p_name').value);
+        formData.append('city', document.getElementById('edit_p_city').value);
+        formData.append('state', document.getElementById('edit_p_state').value);
+        formData.append('country', document.getElementById('edit_p_country').value);
+        formData.append('title_id', document.getElementById('edit_t_id').value);
+        formData.append('title', document.getElementById('edit_t_title').value);
+        formData.append('type', document.getElementById('edit_t_type').value);
+        formData.append('price', document.getElementById('edit_t_price').value);
+        formData.append('advance', document.getElementById('edit_t_advance').value);
+        formData.append('royalty', document.getElementById('edit_t_royalty').value);
+        formData.append('ytd_sales', document.getElementById('edit_t_ytd').value);
         formData.append('notes', '');
-        formData.append('pubdate', document.getElementById('t_date').value);
+        formData.append('pubdate', document.getElementById('edit_t_date').value);
 
         fetch(window.location.href, { method: 'POST', body: formData })
         .then(res => res.json()).then(data => { 
@@ -440,54 +602,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     document.getElementById('statusBtn').innerText = 'OK';
 </script>
 <?php endif; ?>
-
-<div class="modal-overlay" id="detailModal">
-    <div class="detail-card">
-        <div class="close-corner">
-            <button class="close-circle" onclick="goBackToResults()">✕</button>
-        </div>
-        
-        <div class="section-title">PUBLISHER INFORMATION</div>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>PUB_ID</th><th>Publisher Name</th><th>City</th><th>State</th><th>Country</th></tr></thead>
-                <tbody><tr>
-                    <td><input id="p_id" class="grid-input" readonly style="background:#f0f0f0;"></td>
-                    <td><input id="p_name" class="grid-input mode-toggle" readonly></td>
-                    <td><input id="p_city" class="grid-input mode-toggle" readonly></td>
-                    <td><input id="p_state" class="grid-input mode-toggle" readonly></td>
-                    <td><input id="p_country" class="grid-input mode-toggle" readonly></td>
-                </tr></tbody>
-            </table>
-        </div>
-
-        <div class="section-title">TITLE INFORMATION</div>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Title ID</th><th>Title</th><th>Type</th><th>Price</th><th>Advance</th><th>Royalty</th><th>YTD Sales</th><th>Pub Date</th></tr></thead>
-                <tbody><tr>
-                    <td><input id="t_id" class="grid-input" readonly style="background:#f0f0f0;"></td>
-                    <td><input id="t_title" class="grid-input mode-toggle" readonly></td>
-                    <td><input id="t_type" class="grid-input mode-toggle" readonly></td>
-                    <td><input id="t_price" class="grid-input mode-toggle" readonly></td>
-                    <td><input id="t_advance" class="grid-input mode-toggle" readonly></td>
-                    <td><input id="t_royalty" class="grid-input mode-toggle" readonly></td>
-                    <td><input id="t_ytd" class="grid-input mode-toggle" readonly></td>
-                    <td><input id="t_date" class="grid-input mode-toggle" readonly></td>
-                </tr></tbody>
-            </table>
-        </div>
-
-        <div id="viewBtns" style="display:flex; justify-content:center; gap:20px; margin-top:30px;">
-            <button class="btn" style="background:#8b8682; width:180px;" onclick="enableEdit()">EDIT</button>
-            <button class="btn" style="background:#800000; width:180px;" onclick="deleteRecord()">DELETE</button>
-        </div>
-
-        <div id="editBtns" class="hidden" style="display:flex; justify-content:center; gap:20px; margin-top:30px;">
-            <button class="btn" style="background:#8b8682; width:180px;" onclick="saveChanges()">SAVE</button>
-            <button class="btn" style="background:#800000; width:180px;" onclick="window.location.reload()">CANCEL</button>
-        </div>
-    </div>
-</div>
 </body>
 </html>
