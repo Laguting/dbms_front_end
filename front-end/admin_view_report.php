@@ -17,13 +17,12 @@ if ($conn->connect_error) {
 // ==========================================================
 // 1. HANDLE AJAX REQUESTS (UPDATE & DELETE)
 // ==========================================================
-// We check if an 'action' is sent via POST to determine if this is an API call
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
     
     // --- UPDATE LOGIC ---
     if ($_POST['action'] == 'update') {
         $id = $_POST['id'];
-        $publisher = $_POST['publisher'];
+        $publisher = $_POST['publisher']; 
         $author = $_POST['author'];
         $count = $_POST['count'];
         $books = $_POST['books'];
@@ -37,13 +36,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
             echo json_encode(["status" => "error", "message" => $conn->error]);
         }
         $stmt->close();
-        exit; // Stop script here so we don't return HTML
+        exit; 
     }
 
     // --- DELETE LOGIC ---
     if ($_POST['action'] == 'delete') {
         $id = $_POST['id'];
-
         $stmt = $conn->prepare("DELETE FROM book_reports WHERE id=?");
         $stmt->bind_param("i", $id);
 
@@ -53,44 +51,53 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
             echo json_encode(["status" => "error", "message" => $conn->error]);
         }
         $stmt->close();
-        exit; // Stop script here
+        exit;
     }
 }
 
 // ==========================================================
-// 2. SEARCH LOGIC (Standard Page Load)
+// 2. SEARCH & GROUPING LOGIC
 // ==========================================================
 $search_query = "";
-$search_results = [];
+$grouped_results = []; 
 $has_searched = false;
 
-// Only run search if it's NOT an AJAX action
 if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
     $search_query = trim($_POST['search_query'] ?? "");
     $has_searched = true;
 
+    $sql = "SELECT * FROM book_reports";
+    $params = [];
+    $types = "";
+
     if (!empty($search_query)) {
-        $sql = "SELECT * FROM book_reports WHERE publisher LIKE ? OR author LIKE ?";
-        $stmt = $conn->prepare($sql);
+        $sql .= " WHERE publisher LIKE ? OR author LIKE ?";
         $search_term = "%" . $search_query . "%";
-        $stmt->bind_param("ss", $search_term, $search_term);
-        
-        if ($stmt->execute()) {
-            $result = $stmt->get_result();
-            while ($row = $result->fetch_assoc()) {
-                $search_results[] = $row;
+        $params[] = $search_term;
+        $params[] = $search_term;
+        $types = "ss";
+    }
+
+    // Sort by publisher for grouping
+    $sql .= " ORDER BY publisher ASC";
+
+    $stmt = $conn->prepare($sql);
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+    
+    if ($stmt->execute()) {
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            // GROUP DATA: Publisher Name is the Key
+            $pubName = $row['publisher'];
+            if (!isset($grouped_results[$pubName])) {
+                $grouped_results[$pubName] = [];
             }
-        }
-        $stmt->close();
-    } else {
-        $sql = "SELECT * FROM book_reports";
-        $result = $conn->query($sql);
-        if ($result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $search_results[] = $row;
-            }
+            $grouped_results[$pubName][] = $row;
         }
     }
+    $stmt->close();
 }
 ?>
 
@@ -111,6 +118,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
             --pill-hover: #a39c98;
             --btn-edit: #888888; 
             --btn-delete: #8b0000;
+            --modal-bg: #2e343e;
         }
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; min-height: 100vh; font-family: 'Montserrat', sans-serif; background-color: var(--light-bg); }
@@ -133,42 +141,102 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
 
         /* RESULTS LIST */
         .results-list { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; max-width: 700px; }
-        .report-pill { background-color: var(--pill-color); color: white; width: 100%; padding: 20px 40px; border-radius: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: transform 0.2s, background-color 0.2s; cursor: pointer; border: none; }
-        .report-pill:hover { transform: scale(1.02); background-color: var(--pill-hover); }
-        .rep-title { font-family: 'Cinzel', serif; font-size: 22px; text-transform: uppercase; margin-bottom: 5px; line-height: 1.2; }
-        .rep-details { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 300; opacity: 0.9; }
+        .report-pill { background-color: var(--pill-color); color: white; width: 100%; padding: 25px 40px; border-radius: 60px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; text-align: left; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: all 0.2s ease; cursor: pointer; border: none; }
+        .report-pill:hover { transform: translateY(-3px); background-color: var(--pill-hover); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        
+        .pill-left { display: flex; flex-direction: column; }
+        .rep-title { font-family: 'Cinzel', serif; font-size: 24px; text-transform: uppercase; margin-bottom: 5px; line-height: 1.2; font-weight: 700; }
+        .rep-details { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 400; opacity: 0.9; letter-spacing: 1px; }
+        
+        .pill-arrow { font-size: 24px; opacity: 0.7; }
+
         .no-results { font-family: 'Cinzel', serif; font-size: 20px; color: #555; margin-top: 20px; }
 
         /* MODALS */
-        .modal-overlay, .confirm-overlay, .success-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s ease-out; display: none; }
-        .detail-card { background-color: var(--pill-color); color: white; width: 700px; max-width: 90vw; padding: 60px 50px; border-radius: 20px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; }
-        .close-card-x { position: absolute; top: -20px; right: -20px; width: 50px; height: 50px; background-color: white; color: #333; border-radius: 50%; border: none; font-size: 24px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.2s; }
-        .close-card-x:hover { transform: scale(1.1); }
-        .dt-header { font-family: 'Cinzel', serif; font-size: 32px; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 10px; width: 100%; }
-        .dt-sub { font-family: 'Montserrat', sans-serif; font-size: 18px; font-weight: 600; margin-bottom: 20px; opacity: 0.9; }
-        .dt-body { font-family: 'Montserrat', sans-serif; font-size: 16px; line-height: 1.6; font-weight: 300; margin-bottom: 40px; text-align: left; width: 100%; background-color: rgba(0,0,0,0.1); padding: 20px; border-radius: 10px; }
-        .books-label { font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 10px; font-size: 14px; opacity: 0.8; }
-        .edit-input-field { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; font-family: 'Montserrat', sans-serif; font-size: 16px; background-color: rgba(255,255,255,0.1); color: white; display: none; }
-        .edit-input-field:focus { outline: 1px solid white; background-color: rgba(255,255,255,0.2); }
-        .edit-input-field::placeholder { color: rgba(255,255,255,0.6); }
-        textarea.edit-input-field { min-height: 120px; resize: vertical; }
-        .warning-text { color: #8b0000; background-color: rgba(255,255,255,0.8); padding: 10px; border-radius: 5px; font-family: 'Montserrat', sans-serif; font-size: 13px; margin-bottom: 20px; font-weight: 700; display: none; text-transform: uppercase; letter-spacing: 1px; width: 100%; }
+        .modal-overlay, .confirm-overlay, .success-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s ease-out; display: none; }
+        
+        .detail-card { background-color: var(--modal-bg); color: white; width: 800px; max-width: 90vw; padding: 50px; border-radius: 15px; position: relative; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; max-height: 90vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
+        
+        .close-card-x { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; background-color: transparent; color: white; border-radius: 50%; border: 2px solid white; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .close-card-x:hover { background-color: white; color: var(--modal-bg); transform: rotate(90deg); }
+        
+        .dt-header { font-family: 'Cinzel', serif; font-size: 36px; text-transform: uppercase; margin-bottom: 10px; width: 100%; letter-spacing: 2px; }
+        .dt-subheader { font-family: 'Montserrat', sans-serif; font-size: 16px; opacity: 0.8; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.2); width: 100%; padding-bottom: 15px; font-weight: 600; color: #d4d4d4; }
+
+        /* UPDATED LIST STYLES FOR NUMBERED FORMAT */
+        .entries-container { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; text-align: left; }
+        
+        .entry-item-styled { 
+            background-color: rgba(255,255,255,0.05); 
+            padding: 20px; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: flex-start;
+            cursor: pointer; 
+            transition: all 0.2s; 
+            border-bottom: 2px solid rgba(255,255,255,0.05);
+        }
+        
+        .entry-item-styled:hover { 
+            background-color: rgba(255,255,255,0.1); 
+            transform: translateX(5px);
+        }
+
+        .entry-number {
+            font-family: 'Cinzel', serif;
+            font-size: 24px;
+            font-weight: 700;
+            margin-right: 20px;
+            color: var(--pill-color);
+            min-width: 30px;
+        }
+
+        .entry-text-group { display: flex; flex-direction: column; width: 100%; }
+
+        .entry-author-name { 
+            font-family: 'Montserrat', sans-serif; 
+            font-weight: 700; 
+            font-size: 18px; 
+            color: #fff; 
+            margin-bottom: 8px; 
+            text-transform: uppercase;
+        }
+
+        .entry-book-list { 
+            font-size: 14px; 
+            opacity: 0.7; 
+            line-height: 1.5; 
+            font-style: italic;
+            color: #e0e0e0;
+        }
+
+        /* EDIT FORM AREA */
+        #edit-form-area { width: 100%; display: none; background-color: rgba(0,0,0,0.2); padding: 30px; border-radius: 15px; margin-top: 10px; border: 1px solid rgba(255,255,255,0.05); }
+
+        .edit-input-field { width: 100%; padding: 15px; margin-bottom: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); font-family: 'Montserrat', sans-serif; font-size: 16px; background-color: rgba(0,0,0,0.3); color: white; transition: 0.3s; }
+        .edit-input-field:focus { outline: none; border-color: var(--pill-color); background-color: rgba(0,0,0,0.5); }
+        .edit-input-field::placeholder { color: rgba(255,255,255,0.3); }
+        textarea.edit-input-field { min-height: 150px; resize: vertical; line-height: 1.6; }
+        
+        .warning-text { color: #ff6b6b; background-color: rgba(80, 20, 20, 0.4); padding: 15px; border-radius: 5px; font-family: 'Montserrat', sans-serif; font-size: 13px; margin-bottom: 25px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; width: 100%; border: 1px solid #8b0000; }
+        
         .modal-actions { display: flex; justify-content: center; gap: 20px; width: 100%; margin-top: 10px; }
         .btn-action { border: none; padding: 15px 0; width: 160px; border-radius: 50px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s, opacity 0.2s; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         .btn-action:hover { transform: translateY(-2px); opacity: 0.9; }
-        .btn-edit { background-color: var(--btn-edit); }
+        .btn-save { background-color: var(--pill-color); }
         .btn-delete { background-color: var(--btn-delete); }
-        .btn-save { background-color: var(--btn-return); border: 1px solid white; display: none; }
-        .btn-cancel { background-color: #a33b3b; display: none; }
+        .btn-back-list { background-color: transparent; border: 1px solid rgba(255,255,255,0.3); width: auto; padding: 10px 20px; font-size: 12px; margin-bottom: 20px; align-self: flex-start; color: rgba(255,255,255,0.7); }
+        .btn-back-list:hover { background-color: white; color: black; border-color: white; }
 
-        .confirm-card, .success-card { background-color: #20252d; color: white; width: 500px; padding: 50px; border-radius: 20px; text-align: center; border: 1px solid #444; box-shadow: 0 20px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; }
-        .confirm-msg, .success-msg { font-family: 'Cinzel', serif; font-size: 28px; margin-bottom: 40px; font-weight: 400; line-height: 1.3; }
+        /* CONFIRM & SUCCESS */
+        .confirm-card, .success-card { background-color: var(--modal-bg); color: white; width: 500px; padding: 50px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; }
+        .confirm-msg, .success-msg { font-family: 'Cinzel', serif; font-size: 24px; margin-bottom: 40px; font-weight: 400; line-height: 1.4; }
         .confirm-actions { display: flex; gap: 20px; }
         .btn-confirm-yes, .btn-confirm-no, .btn-done { padding: 12px 40px; border-radius: 30px; border: none; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; }
-        .btn-confirm-yes { background-color: #918a86; color: white; }
-        .btn-confirm-no { background-color: #8b0000; color: white; }
-        .btn-done { background-color: #e0e0e0; color: #20252d; padding: 12px 60px; }
-        .btn-done:hover { background-color: white; }
+        .btn-confirm-yes { background-color: var(--pill-color); color: white; }
+        .btn-confirm-no { background-color: var(--btn-delete); color: white; }
+        .btn-done { background-color: white; color: #20252d; padding: 12px 60px; }
+        .btn-done:hover { background-color: #ddd; }
 
         .return-footer { margin-top: 50px; display: flex; justify-content: center; }
         .btn-return-wrap { background-color: var(--btn-return); padding: 12px 30px; border-radius: 50px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s ease; }
@@ -199,18 +267,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
 
         <?php if ($has_searched): ?>
             <div class="results-list">
-                <?php if (count($search_results) > 0): ?>
-                    <?php foreach($search_results as $row): ?>
-                        <button class="report-pill" onclick='openReportDetail(
-                            <?php echo json_encode($row["id"]); ?>,
-                            <?php echo json_encode($row["publisher"]); ?>,
-                            <?php echo json_encode($row["author"]); ?>,
-                            <?php echo json_encode($row["count"]); ?>,
-                            <?php echo json_encode($row["books"]); ?>
+                <?php if (count($grouped_results) > 0): ?>
+                    <?php foreach($grouped_results as $publisherName => $entries): ?>
+                        
+                        <button class="report-pill" onclick='openGroupModal(
+                            <?php echo json_encode($publisherName); ?>,
+                            <?php echo htmlspecialchars(json_encode($entries), ENT_QUOTES, 'UTF-8'); ?>
                         )'>
-                            <span class="rep-title"><?php echo htmlspecialchars($row['publisher']); ?></span>
-                            <span class="rep-details"><?php echo htmlspecialchars($row['author']); ?> | <?php echo htmlspecialchars($row['count']); ?> Books</span>
+                            <div class="pill-left">
+                                <span class="rep-title"><?php echo htmlspecialchars($publisherName); ?></span>
+                                <span class="rep-details"><?php echo count($entries); ?> REGISTERED AUTHORS</span>
+                            </div>
+                            <div class="pill-arrow">➜</div>
                         </button>
+
                     <?php endforeach; ?>
                 <?php else: ?>
                     <div class="no-results">NO ENTRIES FOUND</div>
@@ -229,39 +299,51 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
 
     <div class="modal-overlay" id="detailModal">
         <div class="detail-card">
-            <button class="close-card-x" onclick="closeReportDetail()">X</button>
+            <button class="close-card-x" onclick="closeReportDetail()">✕</button>
             
-            <div class="dt-header" id="dt-publisher">Publisher Name</div>
-            <div class="dt-sub" id="dt-author-count">Author Name | 0 Books</div>
-            <div class="dt-body" id="dt-books-container">
-                <span class="books-label">List of Books:</span>
-                <span id="dt-books">List content...</span>
+            <div class="dt-header" id="modal-pub-title">Publisher Name</div>
+            <div class="dt-subheader" id="modal-pub-stats">Total Books: 0</div>
+
+            <div id="list-view-area" style="width: 100%;">
+                <div class="entries-container" id="entries-list">
+                    </div>
             </div>
 
-            <div id="edit-warning" class="warning-text">
-                NOTE: Please put the correct information to avoid data mismatch.
-            </div>
-
-            <input type="text" id="edit-publisher" class="edit-input-field" placeholder="Edit Publisher Name">
-            <input type="text" id="edit-author" class="edit-input-field" placeholder="Edit Author Name">
-            <input type="number" id="edit-count" class="edit-input-field" placeholder="Edit Total Count">
-            <textarea id="edit-books" class="edit-input-field" placeholder="Edit List of Books"></textarea>
-
-            <div class="modal-actions">
-                <button id="btn-edit" class="btn-action btn-edit" onclick="enableEditMode()">EDIT</button>
-                <button id="btn-delete" class="btn-action btn-delete" onclick="handleDelete()">DELETE</button>
+            <div id="edit-form-area">
+                <button class="btn-action btn-back-list" onclick="showListBack()">← BACK TO ROSTER</button>
                 
-                <button id="btn-save" class="btn-action btn-save" onclick="handleSave()">SAVE</button>
-                <button id="btn-cancel" class="btn-action btn-cancel" onclick="cancelEditMode()">CANCEL</button>
+                <div class="warning-text">
+                    NOTE: Please put the correct information to avoid data mismatch.
+                </div>
+
+                <input type="hidden" id="edit-id"> 
+                
+                <label style="display:block; text-align:left; font-size:12px; margin-bottom:5px; opacity:0.7;">PUBLISHER NAME</label>
+                <input type="text" id="edit-publisher" class="edit-input-field" placeholder="Edit Publisher Name">
+                
+                <label style="display:block; text-align:left; font-size:12px; margin-bottom:5px; opacity:0.7;">AUTHOR NAME</label>
+                <input type="text" id="edit-author" class="edit-input-field" placeholder="Edit Author Name">
+                
+                <label style="display:block; text-align:left; font-size:12px; margin-bottom:5px; opacity:0.7;">TOTAL BOOKS</label>
+                <input type="number" id="edit-count" class="edit-input-field" placeholder="Edit Total Count">
+                
+                <label style="display:block; text-align:left; font-size:12px; margin-bottom:5px; opacity:0.7;">LIST OF BOOKS</label>
+                <textarea id="edit-books" class="edit-input-field" placeholder="Edit List of Books"></textarea>
+
+                <div class="modal-actions">
+                    <button id="btn-save" class="btn-action btn-save" onclick="handleSave()">UPDATE</button>
+                    <button id="btn-delete" class="btn-action btn-delete" onclick="handleDelete()">DELETE</button>
+                </div>
             </div>
+
         </div>
     </div>
 
     <div class="confirm-overlay" id="deleteConfirmModal">
         <div class="confirm-card">
-            <div class="confirm-msg">Are you sure you want to delete this?</div>
+            <div class="confirm-msg">Are you sure you want to delete this author record?</div>
             <div class="confirm-actions">
-                <button class="btn-confirm-yes" onclick="confirmDelete()">CONFIRM</button>
+                <button class="btn-confirm-yes" onclick="confirmDelete()">YES, DELETE</button>
                 <button class="btn-confirm-no" onclick="closeDeleteConfirm()">CANCEL</button>
             </div>
         </div>
@@ -275,60 +357,78 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
     </div>
 
     <script>
-        let currentReportId = null;
+        let currentEntryId = null;
 
-        function openReportDetail(id, publisher, author, count, books) {
-            currentReportId = id;
+        // 1. OPEN MODAL WITH NUMBERED LIST
+        function openGroupModal(publisherName, entriesArray) {
+            // A. Set Header
+            document.getElementById('modal-pub-title').innerText = publisherName;
 
-            // Populate View Mode
-            document.getElementById('dt-publisher').innerText = publisher;
-            document.getElementById('dt-author-count').innerText = author + " | " + count + " Books";
-            document.getElementById('dt-books').innerText = books;
+            // B. Calculate "Total Number of Books under that Publisher"
+            let totalBooks = 0;
+            entriesArray.forEach(entry => {
+                totalBooks += parseInt(entry.count || 0);
+            });
+            document.getElementById('modal-pub-stats').innerText = "Total Number of Books under this Publisher: " + totalBooks;
 
-            // Populate Edit Mode (Hidden Inputs)
-            document.getElementById('edit-publisher').value = publisher;
-            document.getElementById('edit-author').value = author;
-            document.getElementById('edit-count').value = count;
-            document.getElementById('edit-books').value = books;
+            // C. Generate Numbered List
+            const listContainer = document.getElementById('entries-list');
+            listContainer.innerHTML = '';
 
-            cancelEditMode();
+            entriesArray.forEach((entry, index) => {
+                const div = document.createElement('div');
+                div.className = 'entry-item-styled'; // Use the new styled class
+                
+                // Format: 
+                // 1. Author Name
+                // Books of Author...
+                div.innerHTML = `
+                    <div class="entry-number">${index + 1}.</div>
+                    <div class="entry-text-group">
+                        <div class="entry-author-name">${entry.author}</div>
+                        <div class="entry-book-list">${entry.books}</div>
+                    </div>
+                `;
+                
+                // Click event: Open specific edit form
+                div.onclick = function() {
+                    openEditForm(entry);
+                };
+                listContainer.appendChild(div);
+            });
+
+            // Show List, Hide Form
+            document.getElementById('list-view-area').style.display = 'block';
+            document.getElementById('edit-form-area').style.display = 'none';
+            
+            // Open Modal
             document.getElementById('detailModal').style.display = 'flex';
+        }
+
+        // 2. SHOW EDIT FORM FOR SPECIFIC ENTRY
+        function openEditForm(entry) {
+            currentEntryId = entry.id; // Store ID for AJAX
+
+            // Fill inputs with data
+            document.getElementById('edit-id').value = entry.id;
+            document.getElementById('edit-publisher').value = entry.publisher;
+            document.getElementById('edit-author').value = entry.author;
+            document.getElementById('edit-count').value = entry.count;
+            document.getElementById('edit-books').value = entry.books;
+
+            // Swap views: Hide List, Show Form
+            document.getElementById('list-view-area').style.display = 'none';
+            document.getElementById('edit-form-area').style.display = 'block';
+        }
+
+        // 3. BACK BUTTON LOGIC
+        function showListBack() {
+            document.getElementById('list-view-area').style.display = 'block';
+            document.getElementById('edit-form-area').style.display = 'none';
         }
 
         function closeReportDetail() {
             document.getElementById('detailModal').style.display = 'none';
-        }
-
-        function enableEditMode() {
-            document.getElementById('dt-publisher').style.display = 'none';
-            document.getElementById('dt-author-count').style.display = 'none';
-            document.getElementById('dt-books-container').style.display = 'none';
-            document.getElementById('btn-edit').style.display = 'none';
-            document.getElementById('btn-delete').style.display = 'none';
-
-            document.getElementById('edit-warning').style.display = 'block'; 
-            document.getElementById('edit-publisher').style.display = 'block';
-            document.getElementById('edit-author').style.display = 'block';
-            document.getElementById('edit-count').style.display = 'block';
-            document.getElementById('edit-books').style.display = 'block';
-            document.getElementById('btn-save').style.display = 'block';
-            document.getElementById('btn-cancel').style.display = 'block';
-        }
-
-        function cancelEditMode() {
-            document.getElementById('dt-publisher').style.display = 'block';
-            document.getElementById('dt-author-count').style.display = 'block';
-            document.getElementById('dt-books-container').style.display = 'block';
-            document.getElementById('btn-edit').style.display = 'block';
-            document.getElementById('btn-delete').style.display = 'block';
-
-            document.getElementById('edit-warning').style.display = 'none'; 
-            document.getElementById('edit-publisher').style.display = 'none';
-            document.getElementById('edit-author').style.display = 'none';
-            document.getElementById('edit-count').style.display = 'none';
-            document.getElementById('edit-books').style.display = 'none';
-            document.getElementById('btn-save').style.display = 'none';
-            document.getElementById('btn-cancel').style.display = 'none';
         }
 
         // ==========================
@@ -337,7 +437,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         function handleSave() {
             const formData = new FormData();
             formData.append('action', 'update');
-            formData.append('id', currentReportId);
+            formData.append('id', currentEntryId);
             formData.append('publisher', document.getElementById('edit-publisher').value);
             formData.append('author', document.getElementById('edit-author').value);
             formData.append('count', document.getElementById('edit-count').value);
@@ -351,23 +451,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
             .then(data => {
                 if (data.status === 'success') {
                     document.getElementById('detailModal').style.display = 'none';
-                    document.getElementById('success-msg-text').innerText = "Entry successfully edited.";
+                    document.getElementById('success-msg-text').innerText = "Record successfully updated.";
                     document.getElementById('successModal').style.display = 'flex';
                 } else {
                     alert('Error saving data: ' + data.message);
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while saving.');
-            });
+            .catch(error => { console.error('Error:', error); });
         }
 
         // ==========================
         // AJAX DELETE FUNCTION
         // ==========================
         function handleDelete() {
-            if(currentReportId) {
+            if(currentEntryId) {
                 document.getElementById('deleteConfirmModal').style.display = 'flex';
             }
         }
@@ -379,7 +476,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         function confirmDelete() {
             const formData = new FormData();
             formData.append('action', 'delete');
-            formData.append('id', currentReportId);
+            formData.append('id', currentEntryId);
 
             fetch(window.location.href, {
                 method: 'POST',
@@ -390,20 +487,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
                 if (data.status === 'success') {
                     document.getElementById('deleteConfirmModal').style.display = 'none';
                     document.getElementById('detailModal').style.display = 'none';
-                    document.getElementById('success-msg-text').innerText = "Entry successfully deleted.";
+                    document.getElementById('success-msg-text').innerText = "Record deleted.";
                     document.getElementById('successModal').style.display = 'flex';
                 } else {
                     alert('Error deleting data: ' + data.message);
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while deleting.');
-            });
+            .catch(error => { console.error('Error:', error); });
         }
 
         function closeSuccessModal() {
-            // Reload page to reflect changes
             window.location.reload(); 
         }
     </script>
