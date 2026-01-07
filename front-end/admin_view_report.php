@@ -1,72 +1,97 @@
 <?php
 // ==========================================================
-// 1. DATABASE CONNECTION
+// DATABASE CONNECTION
 // ==========================================================
 $servername = "localhost";
-$username   = "root";        // Your Database Username
-$password   = "";            // Your Database Password
-$dbname     = "ink_and_solace";
+$username = "root";
+$password = "";
+$dbname = "ink_and_solace";
 $port = 3307;
 
-// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname, $port);
 
-// Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
 // ==========================================================
-// 2. SEARCH LOGIC
+// 1. HANDLE AJAX REQUESTS (UPDATE & DELETE)
+// ==========================================================
+// We check if an 'action' is sent via POST to determine if this is an API call
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
+    
+    // --- UPDATE LOGIC ---
+    if ($_POST['action'] == 'update') {
+        $id = $_POST['id'];
+        $publisher = $_POST['publisher'];
+        $author = $_POST['author'];
+        $count = $_POST['count'];
+        $books = $_POST['books'];
+
+        $stmt = $conn->prepare("UPDATE book_reports SET publisher=?, author=?, count=?, books=? WHERE id=?");
+        $stmt->bind_param("ssisi", $publisher, $author, $count, $books, $id);
+
+        if ($stmt->execute()) {
+            echo json_encode(["status" => "success"]);
+        } else {
+            echo json_encode(["status" => "error", "message" => $conn->error]);
+        }
+        $stmt->close();
+        exit; // Stop script here so we don't return HTML
+    }
+
+    // --- DELETE LOGIC ---
+    if ($_POST['action'] == 'delete') {
+        $id = $_POST['id'];
+
+        $stmt = $conn->prepare("DELETE FROM book_reports WHERE id=?");
+        $stmt->bind_param("i", $id);
+
+        if ($stmt->execute()) {
+            echo json_encode(["status" => "success"]);
+        } else {
+            echo json_encode(["status" => "error", "message" => $conn->error]);
+        }
+        $stmt->close();
+        exit; // Stop script here
+    }
+}
+
+// ==========================================================
+// 2. SEARCH LOGIC (Standard Page Load)
 // ==========================================================
 $search_query = "";
 $search_results = [];
 $has_searched = false;
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+// Only run search if it's NOT an AJAX action
+if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
     $search_query = trim($_POST['search_query'] ?? "");
-    $has_searched = true; // Flag to show results area
+    $has_searched = true;
 
-    // ==========================================================
-    // SQL QUERY LOGIC
-    // ==========================================================
-    
-    // IF search is empty, select ALL records.
-    // IF search has text, select matches in Publisher OR Author.
-    
-    if (empty($search_query)) {
-        // Fetch All
-        $sql = "SELECT * FROM reports"; // Change 'reports' to your table name
+    if (!empty($search_query)) {
+        $sql = "SELECT * FROM book_reports WHERE publisher LIKE ? OR author LIKE ?";
         $stmt = $conn->prepare($sql);
-    } else {
-        // Filtered Search
-        $sql = "SELECT * FROM reports WHERE publisher_name LIKE ? OR author_name LIKE ?";
-        $stmt = $conn->prepare($sql);
+        $search_term = "%" . $search_query . "%";
+        $stmt->bind_param("ss", $search_term, $search_term);
         
-        if ($stmt) {
-            $param = "%" . $search_query . "%";
-            $stmt->bind_param("ss", $param, $param);
-        }
-    }
-
-    // Execute and Fetch
-    if (isset($stmt) && $stmt->execute()) {
-        $result = $stmt->get_result();
-        
-        while ($row = $result->fetch_assoc()) {
-            // Map DB columns to the keys expected by your HTML/JS
-            $search_results[] = [
-                "id"        => $row['id'],              // DB Column: id
-                "publisher" => $row['publisher_name'],  // DB Column: publisher_name
-                "author"    => $row['author_name'],     // DB Column: author_name
-                "count"     => $row['total_count'],     // DB Column: total_count
-                "books"     => $row['book_list']        // DB Column: book_list
-            ];
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            while ($row = $result->fetch_assoc()) {
+                $search_results[] = $row;
+            }
         }
         $stmt->close();
+    } else {
+        $sql = "SELECT * FROM book_reports";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $search_results[] = $row;
+            }
+        }
     }
 }
-$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -75,9 +100,7 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Books | Ink & Solace</title>
-    
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-
     <style>
         :root {
             --light-bg: #dbdbdb; 
@@ -89,371 +112,70 @@ $conn->close();
             --btn-edit: #888888; 
             --btn-delete: #8b0000;
         }
-
         * { box-sizing: border-box; }
-
-        html, body {
-            margin: 0; padding: 0;
-            min-height: 100vh;
-            font-family: 'Montserrat', sans-serif;
-            background-color: var(--light-bg);
-        }
-
+        html, body { margin: 0; padding: 0; min-height: 100vh; font-family: 'Montserrat', sans-serif; background-color: var(--light-bg); }
         body { display: flex; flex-direction: column; }
 
-        /* ================= TOP SECTION ================= */
-        .top-section {
-            background-color: var(--dark-bg);
-            height: 45vh; 
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center; 
-            align-items: center;
-        }
-
-        .header-content-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px; 
-        }
-
+        /* TOP SECTION */
+        .top-section { background-color: var(--dark-bg); height: 45vh; min-height: 300px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .header-content-group { display: flex; flex-direction: column; align-items: center; gap: 15px; }
         .logo-top { width: 180px; height: auto; }
-        
-        /* TEXT TITLE STYLE */
-        .page-title-text {
-            font-family: 'Cinzel', serif;
-            font-size: 80px;
-            color: white;
-            text-transform: uppercase;
-            font-weight: 400;
-            letter-spacing: 5px;
-            margin: 0; 
-            line-height: 1;
-            margin-bottom: 10px; 
-        }
+        .page-title-text { font-family: 'Cinzel', serif; font-size: 80px; color: white; text-transform: uppercase; font-weight: 400; letter-spacing: 5px; margin: 0; line-height: 1; margin-bottom: 10px; }
+        .header-subtitle { font-family: 'Montserrat', sans-serif; color: white; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; margin: 0; font-weight: 300; opacity: 0.8; }
 
-        /* NEW SUBTITLE STYLE */
-        .header-subtitle {
-            font-family: 'Montserrat', sans-serif;
-            color: white;
-            text-transform: uppercase;
-            font-size: 14px;
-            letter-spacing: 1px;
-            margin: 0;
-            font-weight: 300;
-            opacity: 0.8; 
-        }
+        /* BOTTOM SECTION */
+        .bottom-section { flex: 1; padding: 50px 10% 80px; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .search-form { width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 40px; }
+        .search-container { width: 100%; max-width: 600px; position: relative; }
+        .search-input { width: 100%; padding: 15px 25px; border-radius: 50px; border: 1px solid #ccc; background-color: var(--input-bg); outline: none; font-family: 'Montserrat', sans-serif; font-size: 18px; letter-spacing: 2px; text-transform: uppercase; color: #333; }
+        .btn-search-submit { background-color: var(--btn-return); color: white; border: none; padding: 15px 30px; border-radius: 50px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 4px 8px rgba(0,0,0,0.2); transition: transform 0.2s, background-color 0.2s; height: 54px; }
+        .btn-search-submit:hover { transform: translateY(-2px); opacity: 0.9; }
 
-        /* ================= BOTTOM SECTION ================= */
-        .bottom-section {
-            flex: 1;
-            padding: 50px 10% 80px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-        }
+        /* RESULTS LIST */
+        .results-list { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; max-width: 700px; }
+        .report-pill { background-color: var(--pill-color); color: white; width: 100%; padding: 20px 40px; border-radius: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: transform 0.2s, background-color 0.2s; cursor: pointer; border: none; }
+        .report-pill:hover { transform: scale(1.02); background-color: var(--pill-hover); }
+        .rep-title { font-family: 'Cinzel', serif; font-size: 22px; text-transform: uppercase; margin-bottom: 5px; line-height: 1.2; }
+        .rep-details { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 300; opacity: 0.9; }
+        .no-results { font-family: 'Cinzel', serif; font-size: 20px; color: #555; margin-top: 20px; }
 
-        /* SEARCH BAR STYLES */
-        .search-form {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center; 
-            gap: 15px; 
-            margin-bottom: 40px;
-        }
-
-        .search-container {
-            width: 100%;
-            max-width: 600px; 
-            position: relative;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 15px 25px; 
-            border-radius: 50px;
-            border: 1px solid #ccc;
-            background-color: var(--input-bg);
-            outline: none;
-            font-family: 'Montserrat', sans-serif;
-            font-size: 18px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: #333;
-        }
-
-        /* SEARCH BUTTON STYLE */
-        .btn-search-submit {
-            background-color: var(--btn-return);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: transform 0.2s, background-color 0.2s;
-            height: 54px; 
-        }
-
-        .btn-search-submit:hover {
-            transform: translateY(-2px);
-            opacity: 0.9;
-        }
-
-        /* ================= RESULTS LIST STYLES ================= */
-        .results-list {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            width: 100%;
-            max-width: 700px;
-        }
-
-        .report-pill {
-            background-color: var(--pill-color);
-            color: white;
-            width: 100%;
-            padding: 20px 40px;
-            border-radius: 60px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transition: transform 0.2s, background-color 0.2s;
-            cursor: pointer;
-            border: none;
-        }
-
-        .report-pill:hover {
-            transform: scale(1.02);
-            background-color: var(--pill-hover);
-        }
-
-        .rep-title {
-            font-family: 'Cinzel', serif;
-            font-size: 22px;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-            line-height: 1.2;
-        }
-
-        .rep-details {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 16px;
-            font-weight: 300;
-            opacity: 0.9;
-        }
-
-        .no-results {
-            font-family: 'Cinzel', serif;
-            font-size: 20px;
-            color: #555;
-            margin-top: 20px;
-        }
-
-        /* ================= DETAIL MODAL STYLES ================= */
-        .modal-overlay, .confirm-overlay, .success-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.75); 
-            backdrop-filter: blur(5px);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 2000; animation: fadeIn 0.3s ease-out;
-            display: none; /* Hidden by default */
-        }
-
-        .detail-card {
-            background-color: var(--pill-color);
-            color: white;
-            width: 700px;
-            max-width: 90vw;
-            padding: 60px 50px;
-            border-radius: 20px;
-            position: relative;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        /* Close X Button */
-        .close-card-x {
-            position: absolute; top: -20px; right: -20px;
-            width: 50px; height: 50px;
-            background-color: white; color: #333;
-            border-radius: 50%; border: none; font-size: 24px; font-weight: bold;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: 0.2s;
-        }
+        /* MODALS */
+        .modal-overlay, .confirm-overlay, .success-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s ease-out; display: none; }
+        .detail-card { background-color: var(--pill-color); color: white; width: 700px; max-width: 90vw; padding: 60px 50px; border-radius: 20px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; }
+        .close-card-x { position: absolute; top: -20px; right: -20px; width: 50px; height: 50px; background-color: white; color: #333; border-radius: 50%; border: none; font-size: 24px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.2s; }
         .close-card-x:hover { transform: scale(1.1); }
-
-        /* VIEW MODE STYLES */
-        .dt-header {
-            font-family: 'Cinzel', serif;
-            font-size: 32px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.3);
-            padding-bottom: 10px;
-            width: 100%;
-        }
-
-        .dt-sub {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            opacity: 0.9;
-        }
-
-        .dt-body {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-            font-weight: 300;
-            margin-bottom: 40px;
-            text-align: left;
-            width: 100%;
-            background-color: rgba(0,0,0,0.1);
-            padding: 20px;
-            border-radius: 10px;
-        }
-
-        .books-label {
-            font-weight: 700;
-            text-transform: uppercase;
-            display: block;
-            margin-bottom: 10px;
-            font-size: 14px;
-            opacity: 0.8;
-        }
-
-        /* EDIT MODE STYLES */
-        .edit-input-field {
-            width: 100%; padding: 12px; margin-bottom: 15px;
-            border-radius: 5px; border: 1px solid #ccc; font-family: 'Montserrat', sans-serif; font-size: 16px;
-            background-color: rgba(255,255,255,0.1); color: white; display: none;
-        }
+        .dt-header { font-family: 'Cinzel', serif; font-size: 32px; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 10px; width: 100%; }
+        .dt-sub { font-family: 'Montserrat', sans-serif; font-size: 18px; font-weight: 600; margin-bottom: 20px; opacity: 0.9; }
+        .dt-body { font-family: 'Montserrat', sans-serif; font-size: 16px; line-height: 1.6; font-weight: 300; margin-bottom: 40px; text-align: left; width: 100%; background-color: rgba(0,0,0,0.1); padding: 20px; border-radius: 10px; }
+        .books-label { font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 10px; font-size: 14px; opacity: 0.8; }
+        .edit-input-field { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; font-family: 'Montserrat', sans-serif; font-size: 16px; background-color: rgba(255,255,255,0.1); color: white; display: none; }
         .edit-input-field:focus { outline: 1px solid white; background-color: rgba(255,255,255,0.2); }
         .edit-input-field::placeholder { color: rgba(255,255,255,0.6); }
         textarea.edit-input-field { min-height: 120px; resize: vertical; }
-
-        /* WARNING TEXT IN POPUP */
-        .warning-text {
-            color: #8b0000;
-            background-color: rgba(255,255,255,0.8);
-            padding: 10px;
-            border-radius: 5px;
-            font-family: 'Montserrat', sans-serif;
-            font-size: 13px;
-            margin-bottom: 20px;
-            font-weight: 700;
-            display: none;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            width: 100%;
-        }
-
-        /* ACTIONS */
+        .warning-text { color: #8b0000; background-color: rgba(255,255,255,0.8); padding: 10px; border-radius: 5px; font-family: 'Montserrat', sans-serif; font-size: 13px; margin-bottom: 20px; font-weight: 700; display: none; text-transform: uppercase; letter-spacing: 1px; width: 100%; }
         .modal-actions { display: flex; justify-content: center; gap: 20px; width: 100%; margin-top: 10px; }
-        .btn-action {
-            border: none; padding: 15px 0; width: 160px; border-radius: 50px;
-            font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px;
-            cursor: pointer; text-transform: uppercase; transition: transform 0.2s, opacity 0.2s; color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
+        .btn-action { border: none; padding: 15px 0; width: 160px; border-radius: 50px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s, opacity 0.2s; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         .btn-action:hover { transform: translateY(-2px); opacity: 0.9; }
-
         .btn-edit { background-color: var(--btn-edit); }
         .btn-delete { background-color: var(--btn-delete); }
         .btn-save { background-color: var(--btn-return); border: 1px solid white; display: none; }
         .btn-cancel { background-color: #a33b3b; display: none; }
 
-        /* ================= CONFIRMATION MODAL STYLES ================= */
-        .confirm-card {
-            background-color: #20252d; color: white; width: 500px; padding: 50px;
-            border-radius: 20px; text-align: center; border: 1px solid #444;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .confirm-msg {
-            font-family: 'Cinzel', serif; font-size: 28px;
-            margin-bottom: 40px; font-weight: 400; line-height: 1.3;
-        }
+        .confirm-card, .success-card { background-color: #20252d; color: white; width: 500px; padding: 50px; border-radius: 20px; text-align: center; border: 1px solid #444; box-shadow: 0 20px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; }
+        .confirm-msg, .success-msg { font-family: 'Cinzel', serif; font-size: 28px; margin-bottom: 40px; font-weight: 400; line-height: 1.3; }
         .confirm-actions { display: flex; gap: 20px; }
-        .btn-confirm-yes {
-            background-color: #918a86; color: white;
-            padding: 12px 40px; border-radius: 30px; border: none;
-            font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px;
-            cursor: pointer; text-transform: uppercase;
-        }
-        .btn-confirm-no {
-            background-color: #8b0000; color: white;
-            padding: 12px 40px; border-radius: 30px; border: none;
-            font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px;
-            cursor: pointer; text-transform: uppercase;
-        }
-
-        /* ================= SUCCESS MODAL STYLES ================= */
-        .success-card {
-            background-color: #20252d; color: white; width: 500px; padding: 50px;
-            border-radius: 20px; text-align: center; border: 1px solid #444;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-        }
-        .success-msg {
-            font-family: 'Cinzel', serif; font-size: 32px;
-            margin-bottom: 40px; font-weight: 400; line-height: 1.2;
-        }
-        .btn-done {
-            background-color: #e0e0e0; color: #20252d;
-            padding: 12px 60px; border-radius: 30px; border: none;
-            font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px;
-            cursor: pointer; text-transform: uppercase;
-        }
+        .btn-confirm-yes, .btn-confirm-no, .btn-done { padding: 12px 40px; border-radius: 30px; border: none; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; }
+        .btn-confirm-yes { background-color: #918a86; color: white; }
+        .btn-confirm-no { background-color: #8b0000; color: white; }
+        .btn-done { background-color: #e0e0e0; color: #20252d; padding: 12px 60px; }
         .btn-done:hover { background-color: white; }
 
-        /* ================= RETURN BUTTON (Footer) ================= */
-        .return-footer {
-            margin-top: 50px;
-            display: flex;
-            justify-content: center;
-        }
-        .btn-return-wrap {
-            background-color: var(--btn-return);
-            padding: 12px 30px;
-            border-radius: 50px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transition: transform 0.2s ease;
-        }
+        .return-footer { margin-top: 50px; display: flex; justify-content: center; }
+        .btn-return-wrap { background-color: var(--btn-return); padding: 12px 30px; border-radius: 50px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.2s ease; }
         .btn-return-wrap:hover { transform: translateY(-2px); }
         .btn-return-img { width: 160px; height: auto; }
-
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        @media (max-width: 768px) {
-            .page-title-text { font-size: 50px; }
-            .logo-top { width: 130px; }
-            .search-form { flex-direction: column; gap: 10px; }
-            .search-container { width: 100%; }
-            .btn-search-submit { width: 100%; }
-        }
+        @media (max-width: 768px) { .page-title-text { font-size: 50px; } .logo-top { width: 130px; } .search-form { flex-direction: column; gap: 10px; } .search-container { width: 100%; } .btn-search-submit { width: 100%; } }
     </style>
 </head>
 
@@ -462,16 +184,13 @@ $conn->close();
     <div class="top-section">
         <div class="header-content-group">
             <img src="assets/text/logo.png" class="logo-top" alt="Logo">
-            
             <h1 class="page-title-text">REPORT</h1>
-            
             <p class="header-subtitle">add correct information to avoid data mismatch.</p>
         </div>
     </div>
 
     <div class="bottom-section">
-        
-        <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" class="search-form">
+        <form method="POST" class="search-form">
             <div class="search-container">
                 <input type="text" name="search_query" class="search-input" placeholder="SEARCH ENTRIES" value="<?php echo htmlspecialchars($search_query); ?>">
             </div>
@@ -482,7 +201,6 @@ $conn->close();
             <div class="results-list">
                 <?php if (count($search_results) > 0): ?>
                     <?php foreach($search_results as $row): ?>
-                        
                         <button class="report-pill" onclick='openReportDetail(
                             <?php echo json_encode($row["id"]); ?>,
                             <?php echo json_encode($row["publisher"]); ?>,
@@ -493,7 +211,6 @@ $conn->close();
                             <span class="rep-title"><?php echo htmlspecialchars($row['publisher']); ?></span>
                             <span class="rep-details"><?php echo htmlspecialchars($row['author']); ?> | <?php echo htmlspecialchars($row['count']); ?> Books</span>
                         </button>
-
                     <?php endforeach; ?>
                 <?php else: ?>
                     <div class="no-results">NO ENTRIES FOUND</div>
@@ -508,7 +225,6 @@ $conn->close();
                 </div>
             </a>
         </div>
-
     </div>
 
     <div class="modal-overlay" id="detailModal">
@@ -575,10 +291,7 @@ $conn->close();
             document.getElementById('edit-count').value = count;
             document.getElementById('edit-books').value = books;
 
-            // Ensure we start in View Mode
             cancelEditMode();
-
-            // Show the modal
             document.getElementById('detailModal').style.display = 'flex';
         }
 
@@ -587,14 +300,12 @@ $conn->close();
         }
 
         function enableEditMode() {
-            // Hide View Elements
             document.getElementById('dt-publisher').style.display = 'none';
             document.getElementById('dt-author-count').style.display = 'none';
             document.getElementById('dt-books-container').style.display = 'none';
             document.getElementById('btn-edit').style.display = 'none';
             document.getElementById('btn-delete').style.display = 'none';
 
-            // Show Edit Inputs & Warning
             document.getElementById('edit-warning').style.display = 'block'; 
             document.getElementById('edit-publisher').style.display = 'block';
             document.getElementById('edit-author').style.display = 'block';
@@ -605,14 +316,12 @@ $conn->close();
         }
 
         function cancelEditMode() {
-            // Show View Elements
             document.getElementById('dt-publisher').style.display = 'block';
             document.getElementById('dt-author-count').style.display = 'block';
             document.getElementById('dt-books-container').style.display = 'block';
             document.getElementById('btn-edit').style.display = 'block';
             document.getElementById('btn-delete').style.display = 'block';
 
-            // Hide Edit Inputs & Warning
             document.getElementById('edit-warning').style.display = 'none'; 
             document.getElementById('edit-publisher').style.display = 'none';
             document.getElementById('edit-author').style.display = 'none';
@@ -622,24 +331,41 @@ $conn->close();
             document.getElementById('btn-cancel').style.display = 'none';
         }
 
+        // ==========================
+        // AJAX SAVE FUNCTION
+        // ==========================
         function handleSave() {
-            // UI Simulation Only (Requires AJAX for DB Update)
-            let newPub = document.getElementById('edit-publisher').value;
-            let newAuth = document.getElementById('edit-author').value;
-            let newCount = document.getElementById('edit-count').value;
-            let newBooks = document.getElementById('edit-books').value;
+            const formData = new FormData();
+            formData.append('action', 'update');
+            formData.append('id', currentReportId);
+            formData.append('publisher', document.getElementById('edit-publisher').value);
+            formData.append('author', document.getElementById('edit-author').value);
+            formData.append('count', document.getElementById('edit-count').value);
+            formData.append('books', document.getElementById('edit-books').value);
 
-            document.getElementById('dt-publisher').innerText = newPub;
-            document.getElementById('dt-author-count').innerText = newAuth + " | " + newCount + " Books";
-            document.getElementById('dt-books').innerText = newBooks;
-
-            document.getElementById('detailModal').style.display = 'none';
-            document.getElementById('success-msg-text').innerText = "Entry successfully edited.";
-            document.getElementById('successModal').style.display = 'flex';
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('detailModal').style.display = 'none';
+                    document.getElementById('success-msg-text').innerText = "Entry successfully edited.";
+                    document.getElementById('successModal').style.display = 'flex';
+                } else {
+                    alert('Error saving data: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while saving.');
+            });
         }
 
-        /* --- DELETE LOGIC --- */
-
+        // ==========================
+        // AJAX DELETE FUNCTION
+        // ==========================
         function handleDelete() {
             if(currentReportId) {
                 document.getElementById('deleteConfirmModal').style.display = 'flex';
@@ -651,15 +377,34 @@ $conn->close();
         }
 
         function confirmDelete() {
-            // UI Simulation Only (Requires AJAX for DB Delete)
-            document.getElementById('deleteConfirmModal').style.display = 'none';
-            document.getElementById('detailModal').style.display = 'none';
-            document.getElementById('success-msg-text').innerText = "Entry successfully deleted.";
-            document.getElementById('successModal').style.display = 'flex';
+            const formData = new FormData();
+            formData.append('action', 'delete');
+            formData.append('id', currentReportId);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('deleteConfirmModal').style.display = 'none';
+                    document.getElementById('detailModal').style.display = 'none';
+                    document.getElementById('success-msg-text').innerText = "Entry successfully deleted.";
+                    document.getElementById('successModal').style.display = 'flex';
+                } else {
+                    alert('Error deleting data: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while deleting.');
+            });
         }
 
         function closeSuccessModal() {
-            document.getElementById('successModal').style.display = 'none';
+            // Reload page to reflect changes
+            window.location.reload(); 
         }
     </script>
 
