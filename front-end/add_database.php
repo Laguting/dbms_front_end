@@ -28,7 +28,7 @@
             overflow-x: hidden; 
         }
 
-        /* --- TOP SECTION --- */
+        /* HEADER */
         .top-section {
             background-color: var(--light-bg);
             height: 22vh; 
@@ -89,7 +89,7 @@
             object-fit: contain;
         }
 
-        /* --- BOTTOM SECTION --- */
+        /* FOOTER */
         .bottom-section {
             background-color: var(--dark-bg);
             flex: 1;
@@ -133,7 +133,6 @@
             height: 60%;
             width: auto;
             object-fit: contain;
-            /* Changed scale from 2.0 to 1.5 to make it smaller */
             transform: scale(1.5); 
             filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.4));
         }
@@ -166,8 +165,6 @@
             text-decoration: none;
             box-sizing: border-box;
         }
-
-        /* Removed .report-item CSS */
 
         .img-option-text {
             max-height: 70%;
@@ -252,6 +249,7 @@
 
 </body>
 </html>
+
 
 
 
