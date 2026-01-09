@@ -1,16 +1,9 @@
-<?php
-/**
- * Edit Database Page | Ink & Solace
- * * This file is now a PHP script. You can now add server-side logic 
- * above the HTML or inside the body using <?php ?> tags.
- */
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Database | Ink & Solace</title>
+    <title>Add to Database | Ink & Solace</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
 
@@ -258,3 +251,4 @@
 
 </body>
 </html>
+
