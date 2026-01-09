@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Website design for the main menu of Add to Database -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -251,6 +252,7 @@
 
 </body>
 </html>
+
 
 
 
