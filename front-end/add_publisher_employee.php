@@ -74,7 +74,6 @@ if(isset($_GET['ajax_add_publisher'])) {
 
     $pub_name = $data['pub_name'];
 
-    // Check if Publisher exists
     $check_stmt = $conn->prepare("SELECT pub_id FROM publishers WHERE pub_name = ?");
     $check_stmt->bind_param("s", $pub_name);
     $check_stmt->execute();
@@ -286,3 +285,4 @@ if(isset($_GET['ajax_add_publisher'])) {
 
 </body>
 </html>
+
