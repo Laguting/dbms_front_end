@@ -19,7 +19,6 @@
     // ==========================================================
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
-        // --- STEP 2: ADD TITLE ---
         if (isset($_POST['action']) && $_POST['action'] == 'add_title') {
             $gen_title_id = "T" . rand(1000, 9999);
 
@@ -184,7 +183,7 @@
                 background-color: var(--input-bg); font-family: var(--body-font); font-size: 15px;
             }
 
-            /* Styling for dropdowns */
+            /* DROPDOWN FEATURE */
             select.table-input {
                 appearance: none;
                 cursor: pointer;
@@ -657,7 +656,6 @@
             document.getElementById(id).style.display = 'none';
         }
 
-        // Handles Step 1 (Publisher) submission via AJAX
         function handlePublisherSubmit(e) {
             e.preventDefault(); 
 
@@ -668,7 +666,6 @@
                 country: document.getElementById('country').value
             };
 
-            // Call the AJAX endpoint at top of file
             fetch('?ajax_add_publisher=1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -677,13 +674,10 @@
             .then(response => response.json())
             .then(result => {
                 if (result.status === 'success') {
-                    // 1. Close Publisher Modal
                     closeModal('pubModal');
                     
-                    // 2. Set the generated (or found) PUB_ID in the Title Form
                     document.getElementById('hidden_pub_id').value = result.pub_id;
                     
-                    // 3. Open Title Modal
                     openModal('titleModal');
                 } else {
                     alert('Error adding publisher: ' + result.message);
@@ -698,3 +692,4 @@
 
     </body>
     </html>
+
