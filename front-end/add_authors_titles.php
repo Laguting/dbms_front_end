@@ -90,6 +90,7 @@ if(isset($_GET['ajax_add_author'])) {
 ?>
 
 <!DOCTYPE html>
+
 <!-- Website Design for Add to Authors & Titles -->
 <html lang="en">
 <head>
@@ -187,7 +188,7 @@ if(isset($_GET['ajax_add_author'])) {
             background-color: var(--input-bg); font-family: 'Montserrat', sans-serif; font-size: 14px;
         }
 
-        /* Dropdown specific styling adjustments */
+        /* DROPDOWN FEATURE */
         select.table-input {
             appearance: none; 
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
@@ -406,7 +407,6 @@ if(isset($_GET['ajax_add_author'])) {
         document.getElementById(id).style.display = 'none';
     }
 
-    // Handles Step 1 (Author) submission via AJAX
     function handleAuthorSubmit(e) {
         e.preventDefault(); 
 
@@ -445,5 +445,6 @@ if(isset($_GET['ajax_add_author'])) {
 
 </body>
 </html>
+
 
 
