@@ -90,6 +90,7 @@ if(isset($_GET['ajax_add_author'])) {
 ?>
 
 <!DOCTYPE html>
+<!-- Website Design for Add to Authors -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -444,3 +445,4 @@ if(isset($_GET['ajax_add_author'])) {
 
 </body>
 </html>
+
