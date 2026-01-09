@@ -129,28 +129,35 @@ if(isset($_GET['ajax_add_publisher'])) {
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; min-height: 100vh; font-family: 'Montserrat', sans-serif; background-color: var(--light-bg); display: flex; flex-direction: column; }
 
+        /* HEADER */
         .top-section { background-color: var(--dark-bg); height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
         .logo-top { position: absolute; top: 20px; left: 30px; width: 150px; }
         .page-title-img { width: 520px; max-width: 85%; height: auto; margin-top: 30px; }
         .instruction-text { color: white; font-size: 14px; margin-top: 15px; opacity: 0.9; }
 
+        /* MODAL FORMS */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .form-card { background-color: white; width: 800px; max-width: 95vw; padding: 40px; border-radius: 20px; position: relative; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
         .close-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #555; }
         .form-title { font-family: 'Cinzel', serif; font-size: 24px; color: var(--dark-bg); text-align: center; margin-bottom: 30px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-        
+
+        /* GRID FORM */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; }
         .full-width { grid-column: 1 / -1; }
         .input-group { display: flex; flex-direction: column; }
         .text-label { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 700; color: #444; margin-bottom: 5px; margin-left: 10px; text-transform: uppercase; }
+
+        /* DROPDOWN FEATURE */
         .table-input { width: 100%; padding: 12px 20px; border-radius: 50px; border: 1px solid #ccc; background-color: var(--input-bg); font-family: 'Montserrat', sans-serif; font-size: 14px; }
 
+        /* MAIN SELECTION AREA */
         .selection-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 25px; padding: 50px; }
         .big-btn { padding: 20px 0; width: 320px; border-radius: 50px; border: none; font-family: 'Cinzel', serif; font-weight: 700; font-size: 18px; color: white; cursor: pointer; text-transform: uppercase; box-shadow: 0 6px 15px rgba(0,0,0,0.25); transition: transform 0.2s; text-decoration: none; display: flex; justify-content: center; align-items: center; }
         .btn-add { background-color: var(--btn-add-color); }
         .btn-return { background-color: var(--btn-return-color); }
         .submit-btn { color: white; border: none; background-color: var(--btn-add-color); padding: 15px 50px; border-radius: 30px; font-weight: 700; cursor: pointer; text-transform: uppercase; }
-        
+
+        /* SUCCESS MODAL */
         .success-box { background-color: var(--success-bg); width: 450px; padding: 40px; border-radius: 15px; text-align: center; color: white; display: flex; flex-direction: column; align-items: center; gap: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .btn-done { background-color: #f0f0f0; color: #20252d; border: none; padding: 10px 40px; border-radius: 30px; font-weight: 700; cursor: pointer; }
         .hidden { display: none !important; }
@@ -287,5 +294,6 @@ if(isset($_GET['ajax_add_publisher'])) {
 
 </body>
 </html>
+
 
 
