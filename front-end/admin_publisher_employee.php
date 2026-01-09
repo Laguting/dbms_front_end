@@ -16,7 +16,7 @@ if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
 // ==========================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
     
-    // --- UPDATE LOGIC (Updates 2 Tables) ---
+    // --- UPDATE LOGIC ---
     if ($_POST['action'] == 'update') {
         // 1. Update PUBLISHERS Table
         $sql_pub = "UPDATE publishers SET 
@@ -109,6 +109,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
 ?>
 
 <!DOCTYPE html>
+
+<!-- Website Design for Admin View of Publisher & Employee -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -116,7 +118,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
     <title>Publishers & Employees</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root {
+       :root {
             --dark-header: #20252d;
             --body-bg: #dbdbdb;
             --input-bg: #eeeeee;
@@ -132,10 +134,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         body { margin: 0; padding: 0; min-height: 100vh; font-family: var(--body-font); background-color: var(--body-bg); display: flex; flex-direction: column; }
 
         .content-wrapper { width: 100%; display: flex; flex-direction: column; height: 100%; flex: 1; transition: filter 0.3s; }
+        
+        /* HEADER */
         .header-section { background-color: var(--dark-header); height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
         .logo-small { position: absolute; top: 30px; left: 40px; width: 180px; }
         .page-title-img { width: 550px; max-width: 85%; height: auto; margin-top: 10px; }
 
+        /* MAIN CONTENT & SEARCH */
         .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding-top: 40px; }
         .search-container { width: 100%; max-width: 800px; padding: 0 20px; }
         .search-label { font-family: var(--header-font); color: #666; font-size: 22px; margin-bottom: 12px; margin-top: 30px; text-transform: uppercase; letter-spacing: 1px; display: block; }
@@ -143,12 +148,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         .search-input { width: 100%; padding: 18px 22px 18px 55px; border-radius: 50px; border: none; background-color: var(--input-bg); font-family: var(--body-font); font-size: 18px; color: #333; outline: none; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); }
         .search-icon { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); width: 20px; opacity: 0.5; }
         
+        /* MAIN BUTTONS */
         .btn-wrapper { display: flex; flex-direction: column; align-items: center; gap: 18px; margin-top: 45px; }
         .btn-main { padding: 18px 0; width: 310px; border-radius: 50px; border: none; font-weight: 600; font-size: 17px; cursor: pointer; color: white; text-align: center; text-decoration: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: transform 0.2s; font-family: var(--body-font); }
         .btn-main:hover { transform: translateY(-2px); }
         .btn-search { background-color: var(--btn-search); }
         .btn-return { background-color: var(--btn-return); }
 
+        /* MODAL & RESULTS LIST */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(8px); background-color: rgba(0, 0, 0, 0.4); }
         
         .results-box { display: flex; flex-direction: column; align-items: center; gap: 15px; max-height: 60vh; overflow-y: auto; padding: 20px; width: 100%; }
@@ -157,6 +164,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         .res-title { font-family: var(--header-font); font-size: 18px; display: block; margin-bottom: 4px; }
         .res-sub { font-size: 14px; opacity: 0.9; }
 
+        /* DETAIL CARD & TABLES */
         .detail-card { background-color: var(--modal-bg); width: 1400px; max-width: 95vw; max-height: 90vh; padding: 30px; border-radius: 20px; position: relative; overflow-y: auto; display: flex; flex-direction: column; gap: 30px; border: 1px solid #555; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
         .close-x { position: absolute; top: 15px; right: 15px; background: transparent; width: 35px; height: 35px; border-radius: 50%; border: 2px solid white; font-weight: bold; color: white; cursor: pointer; z-index: 10; display:flex; align-items:center; justify-content:center; font-size: 18px; transition: 0.2s; }
         .close-x:hover { background: rgba(255,255,255,0.2); }
@@ -169,6 +177,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         .table-input { width: 100%; padding: 5px; border: 1px solid #ccc; text-align: center; font-family: inherit; }
         .action-btns { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
         
+        /* SUCCESS & DELETE ALERTS */
         .success-card, .delete-card { background-color: var(--success-bg); width: 500px; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .success-text, .delete-text { font-family: var(--header-font); color: white; font-size: 32px; font-weight: 400; line-height: 1.2; }
         .btn-done { background-color: #eeeeee; color: #20252d; border: none; padding: 12px 60px; border-radius: 30px; font-family: var(--body-font); font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
@@ -178,6 +187,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         .btn-cancel { background-color: var(--delete-btn-bg); color: white; border: none; padding: 12px 40px; border-radius: 30px; font-family: var(--body-font); font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
         .btn-yes:hover, .btn-cancel:hover { transform: scale(1.05); }
 
+        /* NO DATA ALERT */
         .no-data-card { background-color: var(--dark-header); width: 550px; padding: 60px 40px; border-radius: 15px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; align-items: center; gap: 25px; }
         .no-data-text { font-family: var(--header-font); color: white; font-size: 26px; font-weight: 400; line-height: 1.4; letter-spacing: 1px; text-transform: uppercase; }
         .btn-ok { background-color: white; color: #20252d; border: none; padding: 12px 70px; border-radius: 30px; font-family: var(--body-font); font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; margin-top: 10px; transition: transform 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
