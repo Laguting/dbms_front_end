@@ -16,7 +16,7 @@ if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
 // ==========================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
     
-    // --- UPDATE LOGIC (Updates 2 Tables) ---
+    // UPDATE LOGIC 
     if ($_POST['action'] == 'update') {
         // 1. Update AUTHOR Table
         $sql_author = "UPDATE authors SET 
@@ -53,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
         exit;
     }
 
-    // --- DELETE LOGIC ---
+    // DELETE LOGIC 
     if ($_POST['action'] == 'delete') {
         $stmt = $conn->prepare("DELETE FROM authors WHERE au_id=?");
         $stmt->bind_param("s", $_POST['au_id']);
@@ -114,6 +114,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
 ?>
 
 <!DOCTYPE html>
+<!-- Website design for Admin Authors & Titles -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -139,20 +140,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         /* HEADER & CONTENT */
         .content-wrapper { width: 100%; display: flex; flex-direction: column; height: 100%; flex: 1; transition: filter 0.3s; }
         .header-section { background-color: var(--dark-header); height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
-        
-        /* FIXED POSITION LOGO */
         .logo-small { position: absolute; top: 20px; left: 30px; width: 150px; } 
-        
-        /* IMAGE TITLE */
         .page-title-img { width: 500px; max-width: 80%; height: auto; margin-top: 10px; }
-
-        /* SEARCH FORM */
         .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding-top: 40px; }
-        
-        /* ENLARGED CONTAINER */
         .search-container { width: 100%; max-width: 800px; padding: 0 20px; }
-        
-        /* ENLARGED LABELS */
         .search-label { 
             font-family: var(--header-font); color: #666; 
             font-size: 22px; 
@@ -161,8 +152,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         }
         
         .input-group { position: relative; width: 100%; margin-bottom: 30px; }
-        
-        /* ENLARGED INPUT */
+
         .search-input { 
             width: 100%; padding: 18px 22px 18px 55px; 
             border-radius: 50px; border: none; 
@@ -171,15 +161,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); 
         }
         .search-icon { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); width: 20px; opacity: 0.5; }
-        
-        /* BUTTON WRAPPER */
         .btn-wrapper { 
             display: flex; flex-direction: column; align-items: center; 
             gap: 18px; 
             margin-top: 45px; 
         }
-        
-        /* ENLARGED BUTTONS */
         .btn-main { 
             padding: 18px 0; width: 310px; 
             border-radius: 50px; border: none; font-weight: 600; 
@@ -221,10 +207,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         
         .table-input { width: 100%; padding: 5px; border: 1px solid #ccc; text-align: center; font-family: inherit; }
         
-        /* DROPDOWN STYLING */
+        /* DROPDOWN FEATURE */
         select.table-input {
-            text-align: left; /* Dropdowns look better left aligned */
-            height: 30px;     /* Ensure consistent height with text inputs */
+            text-align: left; 
+            height: 30px;     
         }
 
         .action-btns { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
@@ -240,8 +226,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         .btn-yes { background-color: var(--btn-search); color: white; border: none; padding: 12px 40px; border-radius: 30px; font-family: var(--body-font); font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
         .btn-cancel { background-color: var(--delete-btn-bg); color: white; border: none; padding: 12px 40px; border-radius: 30px; font-family: var(--body-font); font-weight: 700; font-size: 14px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
         .btn-yes:hover, .btn-cancel:hover { transform: scale(1.05); }
-
-        /* NO DATA MODAL (Dark Theme) */
         .no-data-card {
             background-color: var(--dark-header); 
             width: 550px; padding: 60px 40px; border-radius: 15px;
@@ -604,3 +588,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
 
 </body>
 </html>
+
