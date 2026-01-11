@@ -22,7 +22,7 @@ $results_list = [];
 // ==========================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
-    // --- UPDATE ACTION ---
+    // UPDATE ACTION
     if (isset($_POST['action']) && $_POST['action'] == 'update') {
         $sql_pub = "UPDATE publishers SET pub_name=?, city=?, state=?, country=? WHERE pub_id=?";
         $stmt1 = $conn->prepare($sql_pub);
@@ -40,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
 
-    // --- DELETE ACTION ---
+    // DELETE ACTION 
     if (isset($_POST['action']) && $_POST['action'] == 'delete') {
         $stmt = $conn->prepare("DELETE FROM titles WHERE title_id = ?");
         $stmt->bind_param("s", $_POST['title_id']);
@@ -51,7 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
 
-    // --- SEARCH LOGIC ---
+    // SEARCH LOGIC 
     if (isset($_POST['pub_search']) || isset($_POST['title_search'])) {
         $pub_search = trim($_POST['pub_search'] ?? "");
         $title_search = trim($_POST['title_search'] ?? "");
@@ -95,6 +95,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 ?>
 
 <!DOCTYPE html>
+<!-- Website design for Admin Publishers & Titles -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -111,7 +112,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             --modal-bg: #3c4456; 
             --btn-red: #800000;
         }
-        
+
+        /* MAIN SELECTION */
         body { margin: 0; font-family: 'Montserrat', sans-serif; background-color: var(--body-bg); }
         
         .header { background-color: var(--dark-header); height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
@@ -120,8 +122,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         .main-content { display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
         .search-box { width: 100%; max-width: 800px; }
-        
-        /* --- LABELS: UNBOLDED --- */
         .label { 
             font-family: 'Cinzel', serif; 
             color: var(--text-slate); 
@@ -261,7 +261,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .grid-input.edit-active { background-color: #ffffff; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
-        /* Dropdown specific */
+        /* DROPDOWN FEATURE */
         select.grid-input { text-align: left; height: 32px; }
 
         .close-circle { width: 35px; height: 35px; border: 2px solid white; border-radius: 50%; color: white; background: transparent; cursor: pointer; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: 0.2s; }
@@ -469,7 +469,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </div>
 
 <script>
-    // --- STATUS/MESSAGE MODAL ---
+    // STATUS/MESSAGE MODAL
     function showStatus(message, btnText = 'DONE') {
         document.getElementById('detailModal').style.display = 'none';
         document.getElementById('editModal').style.display = 'none';
@@ -483,12 +483,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         document.getElementById('statusModal').style.display = 'flex';
     }
 
-    // --- VIEW DETAILS (READ ONLY) ---
+    //  VIEW DETAILS
     function showDetails(data) {
         document.getElementById('resultsModal').style.display = 'none';
         document.getElementById('detailModal').style.display = 'flex';
-        
-        // Populate the READ ONLY modal
         document.getElementById('p_id').value = data.pub_id || '';
         document.getElementById('p_name').value = data.pub_name || '';
         document.getElementById('p_city').value = data.city || '';
@@ -511,44 +509,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    // --- OPEN EDIT MODAL (POPULATE & SWITCH) ---
+    // OPEN EDIT MODAL 
     function openEditModal() {
-        // Transfer data from View Modal inputs to Edit Modal inputs
         document.getElementById('edit_p_id').value = document.getElementById('p_id').value;
         document.getElementById('edit_p_name').value = document.getElementById('p_name').value;
         document.getElementById('edit_p_city').value = document.getElementById('p_city').value;
         document.getElementById('edit_p_state').value = document.getElementById('p_state').value;
         document.getElementById('edit_p_country').value = document.getElementById('p_country').value;
-
         document.getElementById('edit_t_id').value = document.getElementById('t_id').value;
         document.getElementById('edit_t_title').value = document.getElementById('t_title').value;
-        
-        // Handle dropdown select
         document.getElementById('edit_t_type').value = document.getElementById('t_type').value;
-
         document.getElementById('edit_t_price').value = document.getElementById('t_price').value;
         document.getElementById('edit_t_advance').value = document.getElementById('t_advance').value;
         document.getElementById('edit_t_royalty').value = document.getElementById('t_royalty').value;
         document.getElementById('edit_t_ytd').value = document.getElementById('t_ytd').value;
         document.getElementById('edit_t_date').value = document.getElementById('t_date').value;
-
-        // Hide View, Show Edit
         document.getElementById('detailModal').style.display = 'none';
         document.getElementById('editModal').style.display = 'flex';
     }
 
-    // --- CLOSE EDIT MODAL ---
+    // CLOSE EDIT MODAL 
     function closeEditModal() {
-        // Hide Edit, Show View again (without saving)
         document.getElementById('editModal').style.display = 'none';
         document.getElementById('detailModal').style.display = 'flex';
     }
 
-    // --- SAVE CHANGES ---
+    // SAVE CHANGES 
     function saveChanges() {
         const formData = new FormData();
         formData.append('action', 'update');
-        // IMPORTANT: Pull values from the EDIT modal inputs (ids start with edit_)
         formData.append('pub_id', document.getElementById('edit_p_id').value);
         formData.append('pub_name', document.getElementById('edit_p_name').value);
         formData.append('city', document.getElementById('edit_p_city').value);
@@ -571,7 +560,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         });
     }
 
-    // --- DELETE LOGIC ---
+    // DELETE LOGIC
     function deleteRecord() {
         document.getElementById('deleteModal').style.display = 'flex';
     }
@@ -604,3 +593,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <?php endif; ?>
 </body>
 </html>
+
