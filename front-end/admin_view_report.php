@@ -19,7 +19,7 @@ if ($conn->connect_error) {
 // ==========================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
     
-    // --- UPDATE LOGIC ---
+    // UPDATE LOGIC 
     if ($_POST['action'] == 'update') {
         $id = $_POST['id'];
         $publisher = $_POST['publisher']; 
@@ -39,7 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
         exit; 
     }
 
-    // --- DELETE LOGIC ---
+    // DELETE LOGIC 
     if ($_POST['action'] == 'delete') {
         $id = $_POST['id'];
         $stmt = $conn->prepare("DELETE FROM book_reports WHERE id=?");
@@ -78,7 +78,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         $types = "ss";
     }
 
-    // Sort by publisher for grouping
     $sql .= " ORDER BY publisher ASC";
 
     $stmt = $conn->prepare($sql);
@@ -89,7 +88,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
     if ($stmt->execute()) {
         $result = $stmt->get_result();
         while ($row = $result->fetch_assoc()) {
-            // GROUP DATA: Publisher Name is the Key
             $pubName = $row['publisher'];
             if (!isset($grouped_results[$pubName])) {
                 $grouped_results[$pubName] = [];
@@ -102,6 +100,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
 ?>
 
 <!DOCTYPE html>
+<!-- Website design for Admin Report -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -162,8 +161,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
         
         .dt-header { font-family: 'Cinzel', serif; font-size: 36px; text-transform: uppercase; margin-bottom: 10px; width: 100%; letter-spacing: 2px; }
         .dt-subheader { font-family: 'Montserrat', sans-serif; font-size: 16px; opacity: 0.8; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.2); width: 100%; padding-bottom: 15px; font-weight: 600; color: #d4d4d4; }
-
-        /* UPDATED LIST STYLES FOR NUMBERED FORMAT */
         .entries-container { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; text-align: left; }
         
         .entry-item-styled { 
@@ -361,27 +358,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
 
         // 1. OPEN MODAL WITH NUMBERED LIST
         function openGroupModal(publisherName, entriesArray) {
-            // A. Set Header
             document.getElementById('modal-pub-title').innerText = publisherName;
-
-            // B. Calculate "Total Number of Books under that Publisher"
             let totalBooks = 0;
             entriesArray.forEach(entry => {
                 totalBooks += parseInt(entry.count || 0);
             });
             document.getElementById('modal-pub-stats').innerText = "Total Number of Books under this Publisher: " + totalBooks;
-
-            // C. Generate Numbered List
             const listContainer = document.getElementById('entries-list');
             listContainer.innerHTML = '';
 
             entriesArray.forEach((entry, index) => {
                 const div = document.createElement('div');
-                div.className = 'entry-item-styled'; // Use the new styled class
-                
-                // Format: 
-                // 1. Author Name
-                // Books of Author...
+                div.className = 'entry-item-styled';
                 div.innerHTML = `
                     <div class="entry-number">${index + 1}.</div>
                     <div class="entry-text-group">
@@ -390,33 +378,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
                     </div>
                 `;
                 
-                // Click event: Open specific edit form
                 div.onclick = function() {
                     openEditForm(entry);
                 };
                 listContainer.appendChild(div);
             });
-
-            // Show List, Hide Form
             document.getElementById('list-view-area').style.display = 'block';
             document.getElementById('edit-form-area').style.display = 'none';
-            
-            // Open Modal
             document.getElementById('detailModal').style.display = 'flex';
         }
 
         // 2. SHOW EDIT FORM FOR SPECIFIC ENTRY
         function openEditForm(entry) {
             currentEntryId = entry.id; // Store ID for AJAX
-
-            // Fill inputs with data
             document.getElementById('edit-id').value = entry.id;
             document.getElementById('edit-publisher').value = entry.publisher;
             document.getElementById('edit-author').value = entry.author;
             document.getElementById('edit-count').value = entry.count;
             document.getElementById('edit-books').value = entry.books;
-
-            // Swap views: Hide List, Show Form
             document.getElementById('list-view-area').style.display = 'none';
             document.getElementById('edit-form-area').style.display = 'block';
         }
@@ -503,3 +482,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['action'])) {
 
 </body>
 </html>
+
