@@ -1,11 +1,5 @@
-<?php
-/**
- * Edit Database Page | Ink & Solace
- * * This file is now a PHP script. You can now add server-side logic 
- * above the HTML or inside the body using <?php ?> tags.
- */
-?>
 <!DOCTYPE html>
+<!-- Website design for Admin Database View -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -139,7 +133,6 @@
             height: 60%;
             width: auto;
             object-fit: contain;
-            /* Changed scale from 2.0 to 1.5 to make it smaller */
             transform: scale(1.5); 
             filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.4));
         }
@@ -271,4 +264,5 @@
     </div>
 
 </body>
+
 </html>
